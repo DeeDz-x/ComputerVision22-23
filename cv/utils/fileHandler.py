@@ -5,19 +5,30 @@ import cv2 as cv
 from numpy import ndarray
 
 
-def loadFrames(directory: str) -> list[list[ndarray]]:
-    ret = [[], []]
+def loadFrames(directory: str, getVideo: bool) -> list[list[ndarray | cv.VideoCapture]]:
+    retList = [[], []]
     for i, folder in enumerate(os.listdir(directory)):
         for file in os.listdir(directory + folder):
-            ret[i].append(cv.imread(directory + folder + '\\' + file))
-    return ret
+            if file.endswith('.avi'):
+                print(f'Loading {file}')
+                cap = cv.VideoCapture(directory + folder + '\\' + file)
+                if getVideo:
+                    retList[i].append(cap)
+                else:
+                    while cap.isOpened():
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+                        retList[i].append(frame)
+                break
+    return retList
 
 
-def loadFolder(directory: str) -> list[list[list[ndarray]]]:
+def loadFolder(directory: str, getVideo: bool = False) -> list[list[list[ndarray]]]:
     ret = [[] for _ in range(len(os.listdir(directory)))]
 
     for i, folder in enumerate(os.listdir(directory)):
-        ret[i] = loadFrames(directory + folder + '\\')
+        ret[i] = loadFrames(directory + folder + '\\', getVideo)
     return ret
 
 

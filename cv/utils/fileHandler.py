@@ -23,7 +23,7 @@ def loadFrames(directory: str, getVideo: bool) -> list[list[ndarray] | cv.VideoC
                 if getVideo:
                     retList[i] = cap
                 else:
-                    retList[i].extend(videoToFrames(cap, retList))
+                    retList[i].extend(videoToFrames(cap, []))
                 break
     return retList
 

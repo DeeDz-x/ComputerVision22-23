@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 
 
-def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
+def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
     backsub = cv.createBackgroundSubtractorMOG2(
         kwargs.get('history', None),
         kwargs.get('varThreshold', 200),
@@ -32,7 +32,7 @@ def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
     return masks
 
 
-def openCVSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
+def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
     backsub = cv.createBackgroundSubtractorKNN(
         kwargs.get('history', None),
         kwargs.get('dist2Threshold', None),
@@ -59,7 +59,7 @@ def openCVSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
     return masks
 
 
-def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):
+def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):
     # Read the first n frames
     frames = []
     for _ in range(n):

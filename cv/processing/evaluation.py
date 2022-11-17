@@ -61,7 +61,7 @@ if __name__ == '__main__':
     videos = fhandler.loadFolder(cur_path, getVideo=True)
 
     video_inputs = [vid[1] for vid in videos]
-    masks = bgsub.openOwnSubMedian(video_inputs[1], 1, 30)
+    masks = bgsub.ownBGSubMedian(video_inputs[1], 1, 30)
     video_gt = [vid[0] for vid in videos]
     gts = video_gt[1]
     gts = v.videoToFrames(gts, [])

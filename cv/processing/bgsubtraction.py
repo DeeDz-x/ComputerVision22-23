@@ -1,9 +1,8 @@
 import cv2 as cv
 
 
-def openCVSubMOG2(file):
+def openCVSubMOG2(video):
     backsub = cv.createBackgroundSubtractorMOG2()
-    video = cv.VideoCapture(file)
 
     backsub.setDetectShadows(False)
     backsub.setVarThreshold(200)
@@ -29,8 +28,7 @@ def openCVSubMOG2(file):
             break
 
 
-def openCVSubKNN(file):
-    video = cv.VideoCapture(file)
+def openCVSubKNN(video):
     backsub = cv.createBackgroundSubtractorKNN()
 
     backsub.setDetectShadows(False)
@@ -55,7 +53,4 @@ def ownSub():
 
 
 if __name__ == "__main__":
-    openCVSubMOG2(r"C:\Users\DeeDz\ComputerVision22-23\images\data_ms2\1\input\1_2.avi")
-    openCVSubMOG2(r"C:\Users\DeeDz\ComputerVision22-23\images\data_ms2\2\input\2_2.avi")
-    openCVSubMOG2(r"C:\Users\DeeDz\ComputerVision22-23\images\data_ms2\3\input\3_2.avi")
-    openCVSubMOG2(r"C:\Users\DeeDz\ComputerVision22-23\images\data_ms2\4\input\4_2.avi")
+    pass

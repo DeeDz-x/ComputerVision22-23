@@ -25,6 +25,9 @@ def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
         keyboard = cv.waitKey(1000 // fps)
         if keyboard == 27:
             break
+        if keyboard == 32:
+            if cv.waitKey(0) == 27:
+                break
 
 
 def openCVSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
@@ -47,6 +50,9 @@ def openCVSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
         keyboard = cv.waitKey(1000 // fps)
         if keyboard == 27:
             break
+        if keyboard == 32:
+            if cv.waitKey(0) == 27:
+                break
 
 
 def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):
@@ -74,12 +80,20 @@ def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwarg
         fgMask = cv.threshold(fgMask, kwargs.get('thresholdMin', 50),
                               kwargs.get('thresholdMax', 255), cv.THRESH_BINARY)[1]
 
+        cv.imshow("FG Mask without closing", fgMask)
+
+        # closing with circles
+        fgMask = cv.morphologyEx(fgMask, cv.MORPH_CLOSE, cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5)))
+
         cv.imshow("Frame", frame)
         cv.imshow("FG Mask", fgMask)
 
         keyboard = cv.waitKey(1000 // fps)
         if keyboard == 27:
             break
+        if keyboard == 32:
+            if cv.waitKey(0) == 27:
+                break
 
 
 if __name__ == "__main__":

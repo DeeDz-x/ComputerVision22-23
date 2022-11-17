@@ -7,38 +7,50 @@ from numpy import ndarray
 from cv.utils.video import videoToFrames
 
 
-def loadFrames(directory: str, getVideo: bool) -> list[list[ndarray] | cv.VideoCapture]:
+def loadFrames(directory: str, getVideo: bool, *, getName: bool = False) -> tuple | list[
+    list[ndarray] | cv.VideoCapture]:
     """ Loads a video from a directory and returns it as a list of frames or the video itself
 
     :param directory: The directory of the folder
     :param getVideo: If True, the function will return a cv.VideoCapture object instead of a list of frames
+    :param getName: If True, the function will return a tuple of the name and the frames or video
     :return: Returns a list of [type[frames | video]]
     """
     retList = [[], []]
+    names = []
     for i, folder in enumerate(os.listdir(directory)):
         for file in os.listdir(directory + folder):
             if file.endswith('.avi'):
-                print(f'Loading {file}')
+                names.append(file)
                 cap = cv.VideoCapture(directory + folder + '\\' + file)
                 if getVideo:
                     retList[i] = cap
                 else:
                     retList[i].extend(videoToFrames(cap, []))
                 break
+    if getName:
+        return names, retList
     return retList
 
 
-def loadFolder(directory: str, getVideo: bool = False) -> list[list[list[ndarray] | cv.VideoCapture]]:
+def loadFolder(directory: str, getVideo: bool = False, *, printInfo: bool = False) -> list[
+    list[list[ndarray] | cv.VideoCapture]]:
     """ Loads all frames from a milestone folder and returns them in a list
 
         :param directory: The directory of the milestone folder
         :param getVideo: If True, the function will return a list of cv.VideoCapture objects instead of lists of frames
+        :param printInfo: If True, the function will print a small message with max 5 names of found videos
         :return: Returns a list of [videos[type[frames | video]]]
     """
     ret = [[] for _ in range(len(os.listdir(directory)))]
-
+    names = []
     for i, folder in enumerate(os.listdir(directory)):
-        ret[i] = loadFrames(directory + folder + '\\', getVideo)
+        retNames, ret[i] = loadFrames(directory + folder + '\\', getVideo, getName=True)
+        names.extend(retNames)
+    if printInfo:
+        # print small message with max 5 names
+        print(f'Loaded {len(names)} videos: [{", ".join(names[:5])}{", ...]" if len(names) > 5 else "]"}')
+        print()
     return ret
 
 

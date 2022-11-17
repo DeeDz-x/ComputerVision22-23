@@ -14,10 +14,11 @@ Ns = [1, 1, 1, 1]
 GT_OFFSETs = [300, 300, 250, 300]
 BGSub_FUNCS = [bgsub.opencvBGSub_MOG2, bgsub.opencvBGSubKNN, bgsub.ownBGSubMedian]
 
+
 def main():
     # Read the images
     cur_path = IMAGES_PATH + 'data_ms2\\'
-    videos = loadFolder(cur_path, getVideo=True)
+    videos = loadFolder(cur_path, getVideo=True, printInfo=True)
 
     bgsub = BGSub_FUNCS[0]
 
@@ -25,9 +26,8 @@ def main():
     gts = [vUtils.videoToFrames(gt, []) for gt in gts]
     video_inputs = [vid[1] for vid in videos]
     avgs = []
-
+    print('Starting evaluation...')
     for cur_vid in range(4):
-        print(f'Video {cur_vid + 1}:')
         masks = bgsub(video_inputs[cur_vid], 30, prepareMatching=True)
         res = []
 
@@ -40,7 +40,7 @@ def main():
         cur_avg = sum(res) / len(res)
         avgs.append(cur_avg)
 
-        print(f'Avg: {cur_avg}')
+        print(f'Video {cur_vid + 1}: Avg: {cur_avg:.4f}')
 
         # Matplotlib for res (f score)
         plt.plot(res)
@@ -48,12 +48,12 @@ def main():
         plt.xlabel('Frame')
         plt.ylabel('F-Score')
         plt.axhline(y=cur_avg, color='r', linestyle='-')
-        plt.text(len(res)+50, cur_avg, f'{cur_avg:.2f}')
+        plt.text(len(res) + 50, cur_avg, f'{cur_avg:.2f}')
         plt.legend(['F-Score', 'Average'], loc='lower center')
         plt.show()
     plt.clf()
 
-    print(f'Overall Avg: {sum(avgs) / len(avgs)}')
+    print(f'Overall Avg: {(sum(avgs) / len(avgs)):.4f}')
 
 
 if __name__ == '__main__':

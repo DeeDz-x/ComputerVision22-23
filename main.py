@@ -13,7 +13,7 @@ def main():
     videos = loadFolder(cur_path, getVideo=True)
 
     video_inputs = [vid[1] for vid in videos]
-    bgsub.openOwnSubMedian(video_inputs[0], 1, 30)
+    bgsub.openOwnSubMedian(video_inputs[0], 1, 30, display=True)
 
 
 if __name__ == '__main__':

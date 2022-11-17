@@ -10,10 +10,10 @@ def main():
     # Read the images
     cur_path = IMAGES_PATH + 'data_ms2\\'
 
-    vids = loadFolder(cur_path, getVideo=True)
-    # vids_inputs (every i in list -> 1 index)
-    vids_inputs = [vid[1] for vid in vids]
-    bgsub.openCVSubKNN(vids_inputs[0])
+    videos = loadFolder(cur_path, getVideo=True)
+
+    video_inputs = [vid[1] for vid in videos]
+    bgsub.openOwnSubMedian(video_inputs[0], 10, 30)
 
 
 if __name__ == '__main__':

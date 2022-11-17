@@ -29,12 +29,11 @@ def main():
             for frame in typ:
                 cur_Vid.write(frame)
             cur_Vid.release()
-            return
         print(f'{counter1=}, {counter2=}')
 
 
 if __name__ == '__main__':
-    main()
+    #main()
     vid = cv.VideoCapture('out/1_1.avi')
     vid.set(cv.CAP_PROP_POS_FRAMES, 500)
     ret, frame = vid.read()

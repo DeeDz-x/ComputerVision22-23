@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+
 import cv.processing.bgsubtraction as bgsub
 import cv.utils.fileHandler as fhandler
 import cv.utils.video as v
@@ -16,24 +17,23 @@ def matching(gtframe, maskframe):
     maskframe = maskframe.astype(int)
     out = np.subtract(thresh, maskframe)
 
-    rn = np.count_nonzero(out == -1)
+    # rn = np.count_nonzero(out == -1)
     rp = np.count_nonzero(out == 1)
     fp = np.count_nonzero(out == -254)
     fn = np.count_nonzero(out == 254)
-
-    print(f'{rn=}, {rp=}, {fp=}, {fn=}')
 
     prec = precision(rp, fp)
     rec = recall(rp, fn)
     fs = fscore(prec, rec)
 
-    print(fs)
-
     return fs
 
 
 def precision(rp: int, fp: int) -> float:
-    return rp / (rp + fp)
+    sigma = rp + fp
+    if sigma == 0:
+        return 0
+    return rp / sigma
 
 
 def recall(rp: int, fn: int) -> float:
@@ -49,12 +49,7 @@ def fscore(prec: float, rec: float) -> float:
 
 
 if __name__ == '__main__':
-    PATH = r'C:\Users\DeeDz\ComputerVision22-23\images' + '\\'
-    gt = cv.imread(r"C:\Users\DeeDz\ComputerVision22-23\images\data_ms2\1\groundtruth\gt000823.png")
-    fg = cv.imread(r"C:\Users\DeeDz\ComputerVision22-23\Frame180.png")
-
-    fg[(fg == 0)] = 1
-    fg[(fg == 255)] = 254
+    PATH = None
 
     cur_path = PATH + 'data_ms2\\'
 
@@ -73,8 +68,6 @@ if __name__ == '__main__':
         res.append(matching(gts[i], m))
 
     print(f'Avg: {sum(res) / len(res)}')
-
-
 
 # matching(gt, fg)
 

@@ -2,24 +2,22 @@ import cv2 as cv
 import numpy as np
 
 
-def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30):
-    backsub = cv.createBackgroundSubtractorMOG2()
-
-    backsub.setDetectShadows(False)
-    backsub.setVarThreshold(200)
+def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
+    backsub = cv.createBackgroundSubtractorMOG2(
+        kwargs.get('history', None),
+        kwargs.get('varThreshold', 200),
+        kwargs.get('detectShadows', False)
+    )
 
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
             break
 
-        channel = cv.GaussianBlur(frame, (5, 5), 1.2)
+        kernelSize = kwargs.get('kernelSize', 5)
+        channel = cv.GaussianBlur(frame, (kernelSize, kernelSize), kwargs.get('sigmaX', 0))
 
-        fgMask = backsub.apply(channel, learningRate=0)
-
-        # cv.rectangle(frame, (10, 2), (100, 20), (255, 255, 255), -1)
-        # cv.putText(frame, str(video.get(cv.CAP_PROP_POS_FRAMES)), (15, 15),
-        #            cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+        fgMask = backsub.apply(channel, learningRate=kwargs.get('learningRate', 0))
 
         cv.imshow("Frame", frame)
         cv.imshow("FG Mask", fgMask)
@@ -29,27 +27,29 @@ def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30):
             break
 
 
-def openCVSubKNN(video: cv.VideoCapture, fps: int = 30):
-    backsub = cv.createBackgroundSubtractorKNN()
-
-    backsub.setDetectShadows(False)
+def openCVSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
+    backsub = cv.createBackgroundSubtractorKNN(
+        kwargs.get('history', None),
+        kwargs.get('dist2Threshold', None),
+        kwargs.get('detectShadows', False)
+    )
 
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
             break
 
-        fgMask = backsub.apply(frame)
+        fgMask = backsub.apply(frame, learningRate=kwargs.get('learningRate', -1))
 
         cv.imshow("Frame", frame)
         cv.imshow("FG Mask", fgMask)
 
         keyboard = cv.waitKey(1000 // fps)
-        if keyboard == 'q' or keyboard == 27:
+        if keyboard == 27:
             break
 
 
-def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30):
+def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):
     # Read the first n frames
     frames = []
     for _ in range(n):
@@ -71,13 +71,14 @@ def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30):
 
         # Conversion to 2 bit image
         fgMask = cv.cvtColor(fgMask, cv.COLOR_BGR2GRAY)
-        fgMask = cv.threshold(fgMask, 50, 255, cv.THRESH_BINARY)[1]
+        fgMask = cv.threshold(fgMask, kwargs.get('thresholdMin', 50),
+                              kwargs.get('thresholdMax', 255), cv.THRESH_BINARY)[1]
 
         cv.imshow("Frame", frame)
         cv.imshow("FG Mask", fgMask)
 
         keyboard = cv.waitKey(1000 // fps)
-        if keyboard == 'q' or keyboard == 27:
+        if keyboard == 27:
             break
 
 

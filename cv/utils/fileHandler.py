@@ -5,7 +5,13 @@ import cv2 as cv
 from numpy import ndarray
 
 
-def loadFrames(directory: str, getVideo: bool) -> list[list[ndarray | cv.VideoCapture]]:
+def loadFrames(directory: str, getVideo: bool) -> list[list[ndarray] | cv.VideoCapture]:
+    """ Loads a video from a directory and returns it as a list of frames or the video itself
+
+    :param directory: The directory of the folder
+    :param getVideo: If True, the function will return a cv.VideoCapture object instead of a list of frames
+    :return: Returns a list of [type[frames | video]]
+    """
     retList = [[], []]
     for i, folder in enumerate(os.listdir(directory)):
         for file in os.listdir(directory + folder):
@@ -13,18 +19,38 @@ def loadFrames(directory: str, getVideo: bool) -> list[list[ndarray | cv.VideoCa
                 print(f'Loading {file}')
                 cap = cv.VideoCapture(directory + folder + '\\' + file)
                 if getVideo:
-                    retList[i].append(cap)
+                    retList[i] = cap
                 else:
-                    while cap.isOpened():
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
-                        retList[i].append(frame)
+                    retList[i].extend(videoToFrames(cap, retList))
                 break
     return retList
 
 
-def loadFolder(directory: str, getVideo: bool = False) -> list[list[list[ndarray]]]:
+def videoToFrames(cap: cv.VideoCapture, retList: list, *, autoRelease: bool = True) -> list[ndarray]:
+    """ Converts a video to a list of frames
+
+        :param cap: The video to convert
+        :param retList: The list to append the frames to
+        :param autoRelease: If True, the video will be released after the conversion
+        :return: Returns a list of frames
+    """
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        retList.append(frame)
+    if autoRelease:
+        cap.release()
+    return retList
+
+
+def loadFolder(directory: str, getVideo: bool = False) -> list[list[list[ndarray] | cv.VideoCapture]]:
+    """ Loads all frames from a milestone folder and returns them in a list
+
+        :param directory: The directory of the milestone folder
+        :param getVideo: If True, the function will return a list of cv.VideoCapture objects instead of lists of frames
+        :return: Returns a list of [videos[type[frames | video]]]
+    """
     ret = [[] for _ in range(len(os.listdir(directory)))]
 
     for i, folder in enumerate(os.listdir(directory)):
@@ -33,6 +59,15 @@ def loadFolder(directory: str, getVideo: bool = False) -> list[list[list[ndarray
 
 
 def saveImage(image: ndarray, name: str = None, *, path: str = 'out/', extension: str = '.png') -> None:
+    """ Saves an image to out/ with the name of the current time if no name is given
+
+        :param image: The image to save
+        :param name: The name of the image (default: current time)
+        :param path: The path to save the image to (default: 'out/')
+        :param extension: The extension of the image (default: '.png')
+    """
+    if name is None:
+        name = str(time.time())
     if not os.path.exists('out'):
         os.makedirs('out')
 

@@ -19,6 +19,11 @@ def openCVSubMOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
 
         fgMask = backsub.apply(channel, learningRate=kwargs.get('learningRate', 0))
 
+        fgMask[(fgMask == 0)] = 1
+        fgMask[(fgMask == 255)] = 254
+
+        print(fgMask)
+
         cv.imshow("Frame", frame)
         cv.imshow("FG Mask", fgMask)
 
@@ -80,7 +85,12 @@ def openOwnSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwarg
         fgMask = cv.threshold(fgMask, kwargs.get('thresholdMin', 50),
                               kwargs.get('thresholdMax', 255), cv.THRESH_BINARY)[1]
 
-        cv.imshow("FG Mask without closing", fgMask)
+        # cv.imshow("FG Mask without closing", fgMask)
+
+        fgMask[(fgMask == 0)] = 1
+        fgMask[(fgMask == 255)] = 254
+
+        #print(fgMask)
 
         # closing with circles
         fgMask = cv.morphologyEx(fgMask, cv.MORPH_CLOSE, cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5)))

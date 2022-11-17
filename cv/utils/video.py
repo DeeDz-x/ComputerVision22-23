@@ -5,7 +5,7 @@ import cv2 as cv
 from numpy import ndarray
 
 
-def videoToFrames(cap: cv.VideoCapture, retList: list, *, autoRelease: bool = True) -> list[ndarray]:
+def videoToFrames(cap: cv.VideoCapture, retList: list, *, autoRelease: bool = False) -> list[ndarray]:
     """ Converts a video to a list of frames
 
         :param cap: The video to convert
@@ -13,6 +13,7 @@ def videoToFrames(cap: cv.VideoCapture, retList: list, *, autoRelease: bool = Tr
         :param autoRelease: If True, the video will be released after the conversion
         :return: Returns a list of frames
     """
+    cap.set(cv.CAP_PROP_POS_FRAMES, 0)
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:

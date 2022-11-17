@@ -40,6 +40,7 @@ def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
     )
 
     masks = []
+    video.set(cv.CAP_PROP_POS_FRAMES, 0)
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -62,6 +63,7 @@ def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
 def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):
     # Read the first n frames
     frames = []
+    video.set(cv.CAP_PROP_POS_FRAMES, 0)
     for _ in range(n):
         ret, frame = video.read()
         if not ret:
@@ -71,7 +73,10 @@ def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs)
     # Calculate the median of the first n frames
     median = np.median(frames, axis=0).astype(np.uint8)
 
+    cv.imshow("Median", median)
+
     masks = []
+    video.set(cv.CAP_PROP_POS_FRAMES, n)
     while video.isOpened():
         ret, frame = video.read()
         if not ret:

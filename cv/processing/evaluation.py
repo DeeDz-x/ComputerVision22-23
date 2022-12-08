@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     cur_path = PATH + 'data_ms2\\'
 
-    videos = fhandler.loadFolder(cur_path, getVideo=True)
+    videos = fhandler.loadFolderMileStone2(cur_path, getVideo=True)
 
     video_inputs = [vid[1] for vid in videos]
     masks = bgsub.ownBGSubMedian(video_inputs[1], 1, 30)

@@ -3,7 +3,7 @@ import os
 import cv2 as cv
 import numpy as np
 
-from cv.utils.fileHandler import loadFolder
+from cv.utils.fileHandler import loadFolderMileStone2
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 
@@ -16,7 +16,7 @@ def main():
     # Read the images
     cur_path = IMAGES_PATH + 'data_ms2\\'
 
-    images = loadFolder(cur_path)
+    images = loadFolderMileStone2(cur_path)
 
     # generate avi
     for vid in images:

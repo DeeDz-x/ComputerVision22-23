@@ -117,11 +117,8 @@ def showVideoFrameWithMask(frame: np.ndarray, mask: np.ndarray, fps: int = 30):
     cv.imshow("FG Mask", mask)
 
     keyboard = cv.waitKey(1000 // fps)
-    if keyboard == 27:
+    if keyboard == 27 or (keyboard == 32 and cv.waitKey(0) == 27):
         return False
-    if keyboard == 32:
-        if cv.waitKey(0) == 27:
-            return False
     return True
 
 

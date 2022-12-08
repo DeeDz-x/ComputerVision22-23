@@ -7,8 +7,8 @@ from numpy import ndarray
 from cv.utils.video import videoToFrames
 
 
-def loadFrames(directory: str, getVideo: bool, *, getName: bool = False) -> tuple | list[
-    list[ndarray] | cv.VideoCapture]:
+def loadFrames(directory: str, getVideo: bool, *, getName: bool = False) -> tuple | list[list[ndarray]
+                                                                                         | cv.VideoCapture]:
     """ Loads a video from a directory and returns it as a list of frames or the video itself
 
     :param directory: The directory of the folder
@@ -33,8 +33,8 @@ def loadFrames(directory: str, getVideo: bool, *, getName: bool = False) -> tupl
     return retList
 
 
-def loadFolder(directory: str, getVideo: bool = False, *, printInfo: bool = False) -> list[
-    list[list[ndarray] | cv.VideoCapture]]:
+def loadFolder(directory: str, getVideo: bool = False, *, printInfo: bool = False) -> list[list[list[ndarray] |
+                                                                                                cv.VideoCapture]]:
     """ Loads all frames from a milestone folder and returns them in a list
 
         :param directory: The directory of the milestone folder

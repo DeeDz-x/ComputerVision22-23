@@ -17,7 +17,6 @@ def matching(gtframe, maskframe):
     maskframe = maskframe.astype(int)
     out = np.subtract(thresh, maskframe)
 
-    # rn = np.count_nonzero(out == -1)
     rp = np.count_nonzero(out == 1)
     fp = np.count_nonzero(out == -254)
     fn = np.count_nonzero(out == 254)
@@ -49,7 +48,7 @@ def fscore(prec: float, rec: float) -> float:
 
 
 if __name__ == '__main__':
-    PATH = None
+    PATH = ''
 
     cur_path = PATH + 'data_ms2\\'
 

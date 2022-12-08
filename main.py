@@ -38,7 +38,7 @@ def main():
                 case 1:
                     masks = BGSub_FUNCS[i](video_inputs[cur_vid], 30, prepareMatching=True)
                 case 2:
-                    masks = BGSub_FUNCS[i](video_inputs[cur_vid], Ns[cur_vid], 30, prepareMatching=True, display=True)
+                    masks = BGSub_FUNCS[i](video_inputs[cur_vid], Ns[cur_vid], 30, prepareMatching=True)
             res = []
 
             # skip first GT_OFFSET frames

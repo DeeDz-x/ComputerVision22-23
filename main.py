@@ -5,6 +5,7 @@ import cv2
 
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
+from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 42, 24, 74, 311]
@@ -17,14 +18,24 @@ def main():
     bboxes = [vid[0] for vid in loaded_data]
     video_inputs = [vid[1] for vid in loaded_data]
 
-    VIDEO_ID = 0
-    offset = OFFSETS[VIDEO_ID]
+    # Setup Video
+    VIDEO_ID = 0  # Video to use (0-4)
+    bbOffset = OFFSETS[VIDEO_ID]
     video = video_inputs[VIDEO_ID]
+
+    # Setup Bounding Boxes
+    INIT_OFFSET = 5  # Offset to start at
     boxesForVideo: list[BoundingBox] = bboxes[VIDEO_ID]
-    initBox = boxesForVideo[0]
+    initBox = boxesForVideo[INIT_OFFSET]
+
+    # Tracker
     tracker = cv2.TrackerCSRT_create()
-    i = 0
+
     scores = []
+    i = INIT_OFFSET + bbOffset  # frame index
+    video.set(cv2.CAP_PROP_POS_FRAMES, i)
+    inited = False
+
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -32,24 +43,28 @@ def main():
 
         # Tracking
         trackedImg = frame.copy()
-        if i == offset:
-            tracker.init(frame, (initBox.left, initBox.top, initBox.width, initBox.height))
-        if i >= offset and len(boxesForVideo) > i - offset:
-            ret, trackedBox = tracker.update(frame)
-            trackedBox = BoundingBox(i, 0, trackedBox[0], trackedBox[1], trackedBox[2], trackedBox[3])
+        if i >= bbOffset:
+            if i == bbOffset:
+                inited = True
+                tracker.init(frame, initBox.getTuple())
+                ret, trackedBox = (True, initBox)  # First Box is from the ground truth
+            else:
+                if not inited:
+                    inited = True
+                    tracker.init(frame, initBox.getTuple())
+                ret, trackedBox = tracker.update(frame)
+                trackedBox = BoundingBox(i, 0, *trackedBox)
             if ret:
-                print(f'Frame {i}: {trackedBox}')
-                trackedImg = trackedBox.addBoxToImage(frame, color=(255, 0, 0), copy=True, alpha=1)
+                trackedImg = trackedBox.addBoxToImage(frame, color=(255, 255, 0), copy=True)
             else:
                 print('Tracking failed on frame', i)
 
             # Ground truth
-            curBox = boxesForVideo[i - offset]
-            curBox.addBoxToImage(trackedImg, color=(0, 0, 255), copy=False, alpha=1)
-            scores.append(BoundingBox.intersectionOverUnion(curBox, trackedBox))
-        cv2.imshow('Tracking', trackedImg)
-        keyboard = cv2.waitKey(1000 // 60)
-        if keyboard == 27 or (keyboard == 32 and cv2.waitKey(0) == 27):
+            if len(boxesForVideo) > i - bbOffset:
+                curBox = boxesForVideo[i - bbOffset]
+                curBox.addBoxToImage(trackedImg, color=(0, 0, 255))
+                scores.append(BoundingBox.intersectionOverUnion(curBox, trackedBox))
+        if not playImageAsVideo(trackedImg, 60):
             break
         i += 1
 

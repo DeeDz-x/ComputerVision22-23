@@ -17,9 +17,9 @@ class BoundingBox:
         self.area = width * height
 
     def __str__(self):
-        return f'Box {self.box_id} in frame {self.frame}: ({self.left}, {self.top}) - ({self.right}, {self.bottom})'
+        return f'Box {self.box_id} in frame {self.frame}: ({self.left=}, {self.top=}, {self.width=}, {self.height=})'
 
-    def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 0.5,
+    def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 1.0,
                       thickness: int = 2, copy: bool = False) -> list[ndarray]:
         """ Adds the box to the image
 
@@ -33,10 +33,28 @@ class BoundingBox:
         if copy:
             img = img.copy()
 
-        addWeighted(rectangle(img.copy(), (self.left, self.top), (self.right, self.bottom), color, thickness),
+        # rounds all values to integers and prints warning if any value is not an integer
+        left, top, right, bottom = self.__roundValues()
+
+        addWeighted(rectangle(img.copy(), (left, top), (right, bottom), color, thickness),
                     alpha, img, 1 - alpha, 0, img)
 
         return img
+
+    def __roundValues(self):
+        """ Rounds all values to integers and prints warning if any value is not an integer """
+        left = round(self.left)
+        top = round(self.top)
+        right = round(self.right)
+        bottom = round(self.bottom)
+
+        if self.left != left or self.top != top or self.right != right or self.bottom != bottom:
+            print('Warning: BoundingBox values are not integers')
+
+        return left, top, right, bottom
+
+    def getTuple(self):
+        return self.left, self.top, self.width, self.height
 
     @staticmethod
     def intersectionOverUnion(box1: 'BoundingBox', box2: 'BoundingBox') -> float:

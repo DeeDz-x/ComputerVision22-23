@@ -2,6 +2,7 @@ import os
 import timeit
 
 import cv2 as cv
+import numpy as np
 
 from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
@@ -30,17 +31,46 @@ def main():
         box = boxes[0]
 
         img = getFrameFromVideo(bg_video, OFFSETS[i])
-        print(box)
-        cv.imshow("img", img)
         # img but only the box
         # only_box = img[box.top:box.bottom, box.left:box.right]
         # cv.imshow("img_box", only_box)
 
         img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        ret = cv.cornerHarris(img, 2, 3, 0.04)
-        ret = cv.dilate(ret, None)
-        ret = cv.threshold(ret, 0.01 * ret.max(), 255, 0)[1]
-        cv.imshow("img_box_corners", ret)
+        mask = np.zeros(img.shape, dtype=np.uint8)
+        cv.rectangle(mask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
+        cv.imshow("mask", mask)
+        pois = cv.goodFeaturesToTrack(img, 150, 0.001, 2, mask=mask)
+        pois_int = np.int0(pois)
+        empty = np.zeros_like(img)
+        for r in pois_int:
+            x, y = r.ravel()
+            cv.circle(empty, (x, y), 3, 255, -1)
+        cv.imshow("goodFeaturesToTrack", empty)
+        cv.waitKey(0)
+        # Flow
+        video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
+        while True:
+            ret, frame = video.read()
+            if not ret:
+                break
+            frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+            p1, st, err = cv.calcOpticalFlowPyrLK(img, frame, pois, None)
+            good_new = p1[st == 1]
+            good_old = pois[st == 1]
+            empty = np.zeros_like(frame)
+            for i, (new, old) in enumerate(zip(good_new, good_old)):
+                a, b = new.ravel()
+                c, d = old.ravel()
+                cv.line(empty, (round(a), round(b)), (round(c), round(d)), 175, 2)
+                cv.circle(empty, (round(a), round(b)), 3, 255, -1)
+            cv.imshow("calcOpticalFlowPyrLK", empty)
+
+            k = cv.waitKey(150) & 0xff
+            if k == 27:
+                break
+
+            img = frame.copy()
+            pois = good_new.reshape(-1, 1, 2)
         cv.waitKey(0)
 
 

@@ -25,6 +25,7 @@ def main():
     # boxesForVideo: list[BoundingBox] = bboxes[VIDEO_ID]
     # initBox = boxesForVideo[INIT_OFFSET]
 
+    scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
         bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=60, dist2Threshold=1200)
         boxes: list[BoundingBox] = bboxes[i]
@@ -45,35 +46,40 @@ def main():
                 break
             frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
             p1, st, err = cv.calcOpticalFlowPyrLK(gray, frame_gray, pois, None, None, None,
-                                                  (latestBox.width, latestBox.height), 3,
-                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03),
+                                                  (21, 21), 3,
+                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
                                                   0, 0.00001)
 
             good_new = p1[st == 1]
             good_old = pois[st == 1]
             empty = np.zeros_like(frame_gray)
-            for i, (new, old) in enumerate(zip(good_new, good_old)):
+            for (new, old) in zip(good_new, good_old):
                 a, b = new.ravel()
                 c, d = old.ravel()
                 cv.line(empty, (round(a), round(b)), (round(c), round(d)), 175, 2)
                 cv.circle(empty, (round(a), round(b)), 3, 255, -1)
             cv.imshow("calcOpticalFlowPyrLK", empty)
 
-            k = cv.waitKey(0) & 0xff
-            if k == 27:
-                break
-
             gray = frame_gray.copy()
             # adds bounding box
             bb = cv.boundingRect(good_new)
             new_box = BoundingBox(counter, 1, bb[0], bb[1], bb[2], bb[3])
+            try:
+                gt_box = boxes[counter]
+                scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
+            except IndexError:
+                pass
             bb_img = new_box.addBoxToImage(frame, copy=True)
             cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
-            if counter % 25 == 0 and counter - 1 <= len(boxes):
+            if counter % 25 == 0:
                 empty, gray, pois, mask = getPois(gray, new_box)
+
             counter += 1
+        print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
+
         cv.waitKey(0)
+    print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
 
 
 def getPois(img: np.ndarray, box: BoundingBox):

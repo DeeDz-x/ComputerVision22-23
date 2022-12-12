@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 
-
 def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
     backsub = cv.createBackgroundSubtractorMOG2(
         kwargs.get('history', None),
@@ -18,7 +17,7 @@ def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
         kernelSize = kwargs.get('kernelSize', 5)
         channel = cv.GaussianBlur(frame, (kernelSize, kernelSize), kwargs.get('sigmaX', 0))
 
-        fgMask = backsub.apply(channel, learningRate=kwargs.get('learningRate', 0))
+        fgMask = backsub.apply(channel, learningRate=kwargs.get('learningRate', -1))
 
         # Prepare the image for matching
         if kwargs.get('prepareMatching', False):
@@ -47,6 +46,10 @@ def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
             break
 
         fgMask = backsub.apply(frame, learningRate=kwargs.get('learningRate', -1))
+
+        kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize", 5), kwargs.get("kernelSize", 5)))
+
+        fgMask = cv.morphologyEx(fgMask, cv.MORPH_OPEN, kernel)
 
         # Prepare the image for matching
         if kwargs.get('prepareMatching', False):

@@ -2,6 +2,7 @@ import os
 
 import cv2 as cv
 import numpy as np
+
 from cv.utils.fileHandler import createOutFolder
 
 
@@ -36,10 +37,11 @@ def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
 
 
 # returns video
-def opencvBGSubKNN(video: cv.VideoCapture, videoId:int, fps: int = 30, genNewCache: bool = False, **kwargs) -> cv.VideoCapture:
+def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCache: bool = False,
+                   **kwargs) -> cv.VideoCapture:
     cacheName = str(videoId) + str(kwargs) + ".avi"
     cachePath = os.path.join(f'out/cache/{cacheName}')
-    cachePath = cachePath.replace(" ", "_").replace(":", "_").replace(",", "_").replace("=", "_").replace("{", "_")\
+    cachePath = cachePath.replace(" ", "_").replace(":", "_").replace(",", "_").replace("=", "_").replace("{", "_") \
         .replace("}", "_").replace("'", "").replace("_", "")
     if not genNewCache:
         # checks if file exists name is based on the parameters

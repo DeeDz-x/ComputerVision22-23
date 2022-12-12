@@ -124,6 +124,7 @@ def createOutFolder(name: str, *, printInfo: bool = False) -> str:
         print(f'Created folder {path}')
     return path
 
+
 def saveImage(image: ndarray, name: str = None, *, path: str = 'out/', extension: str = '.png') -> None:
     """ Saves an image to out/ with the name of the current time if no name is given
 

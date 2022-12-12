@@ -58,7 +58,7 @@ def main():
                 c, d = old.ravel()
                 cv.line(empty, (round(a), round(b)), (round(c), round(d)), 175, 2)
                 cv.circle(empty, (round(a), round(b)), 3, 255, -1)
-            cv.imshow("calcOpticalFlowPyrLK", empty)
+            #cv.imshow("calcOpticalFlowPyrLK", empty)
 
             gray = frame_gray.copy()
             # adds bounding box
@@ -70,22 +70,21 @@ def main():
             except IndexError:
                 pass
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            cv.imshow("boundingRect", bb_img)
+            #cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
-            if counter % 25 == 0:
+            if counter % 30 == 0:
                 empty, gray, pois, mask = getPois(gray, new_box)
 
             counter += 1
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
-        cv.waitKey(0)
     print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
 
 
 def getPois(img: np.ndarray, box: BoundingBox):
     mask = np.zeros(img.shape, dtype=np.uint8)
     cv.rectangle(mask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
-    cv.imshow("mask", mask)
+    #cv.imshow("mask", mask)
     pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=mask)
     pois_int = np.int0(pois)
     poisImg = np.zeros_like(img)

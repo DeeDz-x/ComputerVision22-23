@@ -1,5 +1,9 @@
+import os
+
 import cv2 as cv
 import numpy as np
+from cv.utils.fileHandler import createOutFolder
+
 
 def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
     backsub = cv.createBackgroundSubtractorMOG2(
@@ -31,7 +35,21 @@ def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
     return masks
 
 
-def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
+# returns video
+def opencvBGSubKNN(video: cv.VideoCapture, videoId:int, fps: int = 30, genNewCache: bool = False, **kwargs) -> cv.VideoCapture:
+    cacheName = str(videoId) + str(kwargs) + ".avi"
+    cachePath = os.path.join(f'out/cache/{cacheName}')
+    cachePath = cachePath.replace(" ", "_").replace(":", "_").replace(",", "_").replace("=", "_").replace("{", "_")\
+        .replace("}", "_").replace("'", "").replace("_", "")
+    if not genNewCache:
+        # checks if file exists name is based on the parameters
+        if os.path.isfile(cachePath):
+            # loads video file and returns it
+            video = cv.VideoCapture(cachePath)
+            return video
+        else:
+            print("Cache file not found at Path: " + cachePath)
+
     backsub = cv.createBackgroundSubtractorKNN(
         kwargs.get('history', None),
         kwargs.get('dist2Threshold', None),
@@ -40,6 +58,7 @@ def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
 
     masks = []
     video.set(cv.CAP_PROP_POS_FRAMES, 0)
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize", 5), kwargs.get("kernelSize", 5)))
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -47,20 +66,33 @@ def opencvBGSubKNN(video: cv.VideoCapture, fps: int = 30, **kwargs):
 
         fgMask = backsub.apply(frame, learningRate=kwargs.get('learningRate', -1))
 
-        kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize", 5), kwargs.get("kernelSize", 5)))
-
         fgMask = cv.morphologyEx(fgMask, cv.MORPH_OPEN, kernel)
 
         # Prepare the image for matching
         if kwargs.get('prepareMatching', False):
             prepareMatching(fgMask)
 
-        masks.append(fgMask)
+        masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
 
         if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):
             break
 
-    return masks
+    # saves video file
+    createOutFolder('cache')
+    if os.path.isfile(cachePath):
+        print("Overwriting Cache with name: " + cacheName)
+        os.remove(cachePath)
+    # Create video
+    writer = cv.VideoWriter(cachePath, cv.VideoWriter_fourcc(*'FFV1'), 30, (masks[0].shape[1], masks[0].shape[0]))
+    for mask in masks:
+        writer.write(mask)
+    writer.release()
+    if not os.path.isfile(cachePath):
+        raise Exception("Cache file could not be created at Path: " + cachePath)
+
+    # load video to return
+    video = cv.VideoCapture(cachePath)
+    return video
 
 
 def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):

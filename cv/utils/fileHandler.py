@@ -110,6 +110,20 @@ def loadFolderMileStone3(directory: str, getVideo: bool = True, *, printInfo: bo
     return ret
 
 
+def createOutFolder(name: str, *, printInfo: bool = False) -> str:
+    """ Creates a folder with the given name and returns the path to it
+
+    :param name: The name of the folder
+    :param printInfo: If True, the function will print a small message with the path to the folder
+    :return: Returns the path to the folder
+    """
+    path = f'out\\{name}\\'
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if printInfo:
+        print(f'Created folder {path}')
+    return path
+
 def saveImage(image: ndarray, name: str = None, *, path: str = 'out/', extension: str = '.png') -> None:
     """ Saves an image to out/ with the name of the current time if no name is given
 

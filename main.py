@@ -2,12 +2,11 @@ import os
 import timeit
 
 import cv2 as cv
-import numpy as np
 
+from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
-from cv.utils.video import playImageAsVideo
-from cv.processing.bgsubtraction import opencvBGSubKNN
+from cv.utils.video import getFrameFromVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 42, 24, 74, 311]
@@ -26,19 +25,23 @@ def main():
     # initBox = boxesForVideo[INIT_OFFSET]
 
     for i, video in enumerate(video_inputs):
-        images = opencvBGSubKNN(video, display=False, learningRate=-1, fps=60, dist2Threshold=1200)
+        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=60, dist2Threshold=1200)
         boxes: list[BoundingBox] = bboxes[i]
         box = boxes[0]
 
-        img = images[OFFSETS[i]]
-        img = box.addBoxToImage(img, copy=True, color=(255))
+        img = getFrameFromVideo(bg_video, OFFSETS[i])
         print(box)
         cv.imshow("img", img)
+        # img but only the box
+        # only_box = img[box.top:box.bottom, box.left:box.right]
+        # cv.imshow("img_box", only_box)
 
-        ret = cv.cornerHarris(images[OFFSETS[i]][box.left:box.right, box.top:box.bottom], 2, 3, 0.04)
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        ret = cv.cornerHarris(img, 2, 3, 0.04)
+        ret = cv.dilate(ret, None)
+        ret = cv.threshold(ret, 0.01 * ret.max(), 255, 0)[1]
+        cv.imshow("img_box_corners", ret)
         cv.waitKey(0)
-
-
 
 
 if __name__ == '__main__':

@@ -60,6 +60,22 @@ def playImageAsVideo(img, fps=60) -> bool:
     """
     cv.imshow('Tracking', img)
     keyboard = cv.waitKey(1000 // fps)
-    if keyboard == 27 or (keyboard == 32 and cv2.waitKey(0) == 27):
+    if keyboard == 27 or (keyboard == 32 and cv.waitKey(0) == 27):
         return False
     return True
+
+
+def getFrameFromVideo(video: cv.VideoCapture, frameIndex: int) -> ndarray:
+    """ Returns a frame from a video
+
+        :param video: The video to get the frame from
+        :param frameIndex: The frame number to get
+        :return: Returns the frame
+    """
+    oldFrameIndex = video.get(cv.CAP_PROP_POS_FRAMES)
+    video.set(cv.CAP_PROP_POS_FRAMES, frameIndex)
+    ret, frame = video.read()
+    if not ret:
+        raise Exception("Error reading frame")
+    video.set(cv.CAP_PROP_POS_FRAMES, oldFrameIndex)
+    return frame

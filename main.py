@@ -56,7 +56,6 @@ def main():
 
             good_new = p1[st == 1]
             good_old = pois[st == 1]
-            empty = np.zeros_like(frame_gray)
             for (new, old) in zip(good_new, good_old):
                 a, b = new.ravel()
                 c, d = old.ravel()
@@ -80,7 +79,7 @@ def main():
             # cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
             if counter % 10 == 0:
-                new_pois = getPois(gray, new_box, empty)
+                new_pois = getPois(gray, new_box, bg_frame)
                 if new_pois is not None:
                     pois = new_pois
 

@@ -23,7 +23,7 @@ def main():
 
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
-        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=30, dist2Threshold=1200, kernelSize=5)
+        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=0.05, fps=30, dist2Threshold=1200, kernelSize=5)
         boxes: list[BoundingBox] = bboxes[i]
         latestBox = boxes[0]
 

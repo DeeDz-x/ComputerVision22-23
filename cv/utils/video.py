@@ -48,7 +48,7 @@ def framesToVideo(frames: list[ndarray], *, fps: int = 30, name: str = None, pat
     return cv.VideoCapture(path + name + '.avi')
 
 
-def playImageAsVideo(img, fps=60) -> bool:
+def playImageAsVideo(img, fps=60, name="Video") -> bool:
     """ Plays the image as a video with the given fps
     Call this function in a loop to play a video
     Controls:
@@ -56,9 +56,10 @@ def playImageAsVideo(img, fps=60) -> bool:
         - Press 'space' to pause
     :param img: The image to play
     :param fps: The fps of the video
+    :param name: The name of the window
     :return: Returns True if the video should continue, False if it should stop
     """
-    cv.imshow('Tracking', img)
+    cv.imshow(name, img)
     keyboard = cv.waitKey(1000 // fps)
     if keyboard == 27 or (keyboard == 32 and cv.waitKey(0) == 27):
         return False

@@ -57,8 +57,8 @@ def main():
                 break
 
             good_new = p1[st == 1]
-            if not displayFrame(True, frame, pois, good_new, st):
-                break
+            # if not displayFrame(True, frame, pois, good_new, st):
+            #    break
 
             # adds bounding box
             bb = cv.boundingRect(good_new)
@@ -67,11 +67,12 @@ def main():
                 break
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
-            # bb_img = new_box.addBoxToImage(frame, copy=True)
-            # cv.imshow("boundingRect", bb_img)
+            bb_img = new_box.addBoxToImage(frame, copy=True)
+            #if not playImageAsVideo(bb_img, 30, "BB"):
+            #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter % 25 == 0:
+            if counter % 100 == 0:
                 cv.imshow("bg_frame", bg_frame)
                 pois = getPois(gray, new_box, bg_frame)
                 if pois is None:
@@ -93,7 +94,7 @@ def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: n
         cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
         cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
 
-    if not playImageAsVideo(frame, fps=30):
+    if not playImageAsVideo(frame, 30, "frame"):
         return False
     return True
 

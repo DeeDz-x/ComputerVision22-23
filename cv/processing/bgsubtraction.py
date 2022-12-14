@@ -39,18 +39,9 @@ def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
 # returns video
 def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCache: bool = False,
                    **kwargs) -> cv.VideoCapture:
-    cacheName = str(videoId) + str(kwargs) + ".avi"
-    cachePath = os.path.join(f'out/cache/{cacheName}')
-    cachePath = cachePath.replace(" ", "_").replace(":", "_").replace(",", "_").replace("=", "_").replace("{", "_") \
-        .replace("}", "_").replace("'", "").replace("_", "")
-    if not genNewCache:
-        # checks if file exists name is based on the parameters
-        if os.path.isfile(cachePath):
-            # loads video file and returns it
-            video = cv.VideoCapture(cachePath)
-            return video
-        else:
-            print("Cache file not found at Path: " + cachePath)
+    cached_video, cacheName, cachePath = loadCache("KNN", videoId, genNewCache, kwargs)
+    if cached_video is not None:
+        return cached_video
 
     backsub = cv.createBackgroundSubtractorKNN(
         kwargs.get('history', None),
@@ -81,6 +72,7 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
 
     # saves video file
     createOutFolder('cache')
+    createOutFolder(f'cache/{videoId}')
     if os.path.isfile(cachePath):
         print("Overwriting Cache with name: " + cacheName)
         os.remove(cachePath)
@@ -95,6 +87,24 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
     # load video to return
     video = cv.VideoCapture(cachePath)
     return video
+
+
+def loadCache(func_name: str, videoId: int, genNewCache: bool, kwargs: dict):
+    kwargs.pop('display', None)
+    kwargs_str = str(kwargs).replace(" ", "_").replace(":", "_").replace(",", "_").replace("=", "_").replace("{", "_") \
+        .replace("}", "_").replace("'", "").replace("_", "")
+    cacheName = f'{func_name}__{kwargs_str}.avi'
+    cachePath = os.path.join(f'out/cache/{videoId}/{cacheName}')
+    if not genNewCache:
+        # checks if file exists name is based on the parameters
+        if os.path.isfile(cachePath):
+            # loads video file and returns it
+            video = cv.VideoCapture(cachePath)
+            return video, cacheName, cachePath
+        else:
+            print("Cache file not found at Path: " + cachePath)
+
+    return None, cacheName, cachePath
 
 
 def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):

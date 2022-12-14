@@ -23,7 +23,7 @@ def main():
 
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
-        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=30, dist2Threshold=1200)
+        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=30, dist2Threshold=1200, kernelSize=5)
         boxes: list[BoundingBox] = bboxes[i]
         latestBox = boxes[0]
 
@@ -36,6 +36,9 @@ def main():
         # cv.imshow("img_box", only_box)
         print("First Box " + str(latestBox))
         pois = getPois(gray, latestBox, gray)
+        if pois is None:
+            print("No POIs")
+            continue
         # Flow
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
         counter = 1
@@ -59,9 +62,10 @@ def main():
             # adds bounding box
             bb = cv.boundingRect(good_new)
             new_box = BoundingBox(counter + OFFSETS[i], 1, bb[0], bb[1], bb[2], bb[3])
-            if counter < len(boxes):
-                gt_box = boxes[counter]
-                scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
+            if counter >= len(boxes):
+                break
+            gt_box = boxes[counter]
+            scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             # bb_img = new_box.addBoxToImage(frame, copy=True)
             # cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)

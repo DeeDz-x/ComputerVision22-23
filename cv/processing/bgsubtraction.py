@@ -132,23 +132,23 @@ def loadCache(func_name: str, videoId: int, genNewCache: bool, kwargs: dict):
     return None, cacheName, cachePath
 
 
-def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs):
-    # Read the first n frames
+def ownBGSubMedian(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCache: bool = False,
+                   **kwargs) -> cv.VideoCapture:
+    cached_video, cacheName, cachePath = loadCache("Median", videoId, genNewCache, kwargs)
+    if cached_video is not None:
+        return cached_video
+
     frames = []
     video.set(cv.CAP_PROP_POS_FRAMES, 0)
-    for _ in range(n):
+    for _ in range(kwargs.get('n', 10)):
         ret, frame = video.read()
         if not ret:
             break
         frames.append(frame)
-
-    # Calculate the median of the first n frames
     median = np.median(frames, axis=0).astype(np.uint8)
 
-    cv.imshow("Median", median)
-
     masks = []
-    video.set(cv.CAP_PROP_POS_FRAMES, n)
+    video.set(cv.CAP_PROP_POS_FRAMES, kwargs.get('n', 10))
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -174,7 +174,12 @@ def ownBGSubMedian(video: cv.VideoCapture, n: int = 10, fps: int = 30, **kwargs)
         if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):
             break
 
-    return masks
+    # saves video file
+    createCache(cacheName, cachePath, masks, videoId)
+
+    # load video to return
+    video = cv.VideoCapture(cachePath)
+    return video
 
 
 def showVideoFrameWithMask(frame: np.ndarray, mask: np.ndarray, fps: int = 30):

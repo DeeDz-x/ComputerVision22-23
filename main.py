@@ -40,7 +40,7 @@ def main():
         # only_box = img[box.top:box.bottom, box.left:box.right]
         # cv.imshow("img_box", only_box)
         print("First Box " + str(latestBox))
-        poisImg, gray, pois = getPois(gray, latestBox, bg_frame)
+        poisImg, gray, pois = getPois(gray, latestBox, gray)
         # Flow
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
         counter = 1
@@ -79,8 +79,8 @@ def main():
             bb_img = new_box.addBoxToImage(frame, copy=True)
             # cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
-            if counter % 30 == 0:
-                empty, gray, pois = getPois(gray, new_box, bg_frame)
+            if counter % 10 == 0:
+                empty, gray, pois = getPois(gray, new_box, gray)
 
             counter += 1
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
@@ -88,10 +88,10 @@ def main():
     print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
 
 
-def getPois(img: np.ndarray, box: BoundingBox, combined_mask: np.ndarray):
+def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     gtmask = np.zeros(img.shape, dtype=np.uint8)
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
-    combined_mask = cv.bitwise_and(combined_mask.copy(), gtmask)
+    combined_mask = cv.bitwise_and(mask.copy(), gtmask)
     cv.imshow("Mask", combined_mask)
     pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=combined_mask)
     pois_int = np.int0(pois)

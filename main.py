@@ -53,14 +53,17 @@ def main():
                                                   (21, 21), 3,
                                                   (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
                                                   0, 0.00001)
+            if p1 is None:
+                print("No Points")
+                break
 
             good_new = p1[st == 1]
             good_old = pois[st == 1]
             for (new, old) in zip(good_new, good_old):
                 a, b = new.ravel()
                 c, d = old.ravel()
-                cv.line(frame, (round(a), round(b)), (round(c), round(d)), 175, 2)
-                cv.circle(frame, (round(a), round(b)), 3, 255, -1)
+                cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
+                cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
             # cv.imshow("calcOpticalFlowPyrLK", gray)
 
             if not playImageAsVideo(frame, fps=30):
@@ -78,10 +81,10 @@ def main():
             bb_img = new_box.addBoxToImage(frame, copy=True)
             # cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
-            if counter % 10 == 0:
-                new_pois = getPois(gray, new_box, bg_frame)
-                if new_pois is not None:
-                    pois = new_pois
+            if counter % 1000 == 0:
+                pois = getPois(gray, new_box, bg_frame)
+                if pois is None:
+                    pois = good_new.reshape(-1, 1, 2)
 
             counter += 1
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
@@ -93,7 +96,7 @@ def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     gtmask = np.zeros(img.shape, dtype=np.uint8)
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
     combined_mask = cv.bitwise_and(mask.copy(), gtmask)
-    #cv.imshow("Mask", combined_mask)
+    # cv.imshow("Mask", combined_mask)
     pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=combined_mask)
     return pois
 

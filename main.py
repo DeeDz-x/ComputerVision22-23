@@ -35,7 +35,7 @@ def main():
         # cv.imshow("img_box", only_box)
         pois = getPois(gray, latestBox, gray)
         if pois is None:
-            print("No POIs")
+            print("!!No POIs!!")
             continue
         # Flow
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
@@ -53,7 +53,7 @@ def main():
                                                   (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
                                                   0, 0.00001)
             if p1 is None:
-                print("No Points")
+                print("!!No Points!!")
                 break
 
             good_new = p1[st == 1]

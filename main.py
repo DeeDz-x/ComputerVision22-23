@@ -8,6 +8,7 @@ from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
 from cv.utils.video import getFrameFromVideo
+from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 42, 24, 74, 311]
@@ -27,19 +28,22 @@ def main():
 
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
-        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=60, dist2Threshold=1200)
+        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=30, dist2Threshold=1200)
         boxes: list[BoundingBox] = bboxes[i]
         latestBox = boxes[0]
 
-        img = getFrameFromVideo(bg_video, OFFSETS[i])
+        img = getFrameFromVideo(video, OFFSETS[i])
         gray = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
+        bg_frame = getFrameFromVideo(bg_video, OFFSETS[i])
+        bg_frame = cv.cvtColor(bg_frame, cv.COLOR_BGR2GRAY)
         # img but only the box
         # only_box = img[box.top:box.bottom, box.left:box.right]
         # cv.imshow("img_box", only_box)
-        poisImg, gray, pois, mask = getPois(gray, latestBox)
+        print("First Box "+ str(latestBox))
+        poisImg, gray, pois = getPois(gray, latestBox, bg_frame)
         # Flow
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
-        counter = 0
+        counter = 1
         while True:
             ret, frame = video.read()
             if not ret:
@@ -56,14 +60,17 @@ def main():
             for (new, old) in zip(good_new, good_old):
                 a, b = new.ravel()
                 c, d = old.ravel()
-                cv.line(empty, (round(a), round(b)), (round(c), round(d)), 175, 2)
-                cv.circle(empty, (round(a), round(b)), 3, 255, -1)
-            #cv.imshow("calcOpticalFlowPyrLK", empty)
+                cv.line(frame, (round(a), round(b)), (round(c), round(d)), 175, 2)
+                cv.circle(frame, (round(a), round(b)), 3, 255, -1)
+            # cv.imshow("calcOpticalFlowPyrLK", gray)
+
+            if not playImageAsVideo(frame, fps=30):
+                break
 
             gray = frame_gray.copy()
             # adds bounding box
             bb = cv.boundingRect(good_new)
-            new_box = BoundingBox(counter, 1, bb[0], bb[1], bb[2], bb[3])
+            new_box = BoundingBox(counter+OFFSETS[i], 1, bb[0], bb[1], bb[2], bb[3])
             try:
                 gt_box = boxes[counter]
                 scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
@@ -72,8 +79,8 @@ def main():
             bb_img = new_box.addBoxToImage(frame, copy=True)
             #cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
-            if counter % 30 == 0:
-                empty, gray, pois, mask = getPois(gray, new_box)
+            if counter % 1000 == 0:
+                empty, gray, pois = getPois(gray, new_box, bg_frame)
 
             counter += 1
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
@@ -81,17 +88,18 @@ def main():
     print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
 
 
-def getPois(img: np.ndarray, box: BoundingBox):
-    mask = np.zeros(img.shape, dtype=np.uint8)
-    cv.rectangle(mask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
-    #cv.imshow("mask", mask)
+def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
+    gtmask = np.zeros(img.shape, dtype=np.uint8)
+    cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
+    mask = cv.bitwise_and(mask, gtmask)
+    cv.imshow("Mask", mask)
     pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=mask)
     pois_int = np.int0(pois)
     poisImg = np.zeros_like(img)
     for r in pois_int:
         x, y = r.ravel()
         cv.circle(poisImg, (x, y), 3, 255, -1)
-    return poisImg, img, pois, mask
+    return poisImg, img, pois
 
 
 if __name__ == '__main__':

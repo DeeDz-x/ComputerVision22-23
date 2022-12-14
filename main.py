@@ -33,7 +33,7 @@ def main():
         latestBox = boxes[0]
 
         img = getFrameFromVideo(video, OFFSETS[i])
-        gray = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         bg_frame = getFrameFromVideo(bg_video, OFFSETS[i])
         bg_frame = cv.cvtColor(bg_frame, cv.COLOR_BGR2GRAY)
         # img but only the box
@@ -69,7 +69,8 @@ def main():
             if not playImageAsVideo(frame, fps=30):
                 break
 
-            gray = frame_gray.copy()
+            gray = frame_gray
+
             # adds bounding box
             bb = cv.boundingRect(good_new)
             new_box = BoundingBox(counter + OFFSETS[i], 1, bb[0], bb[1], bb[2], bb[3])
@@ -79,7 +80,7 @@ def main():
             except IndexError:
                 pass
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            # cv.imshow("boundingRect", bb_img)
+            cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
             if counter % 1000 == 0:
                 pois = getPois(gray, new_box, bg_frame)
@@ -95,7 +96,7 @@ def main():
 def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     gtmask = np.zeros(img.shape, dtype=np.uint8)
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
-    combined_mask = cv.bitwise_and(mask.copy(), gtmask)
+    combined_mask = cv.bitwise_and(mask, gtmask)
     # cv.imshow("Mask", combined_mask)
     pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=combined_mask)
     return pois

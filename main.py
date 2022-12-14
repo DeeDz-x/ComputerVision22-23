@@ -11,7 +11,7 @@ from cv.utils.video import getFrameFromVideo
 from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
-OFFSETS = [19, 42, 24, 74, 311]
+OFFSETS = [19, 41, 24, 74, 311]
 
 
 def main():
@@ -29,8 +29,6 @@ def main():
 
         img = getFrameFromVideo(video, OFFSETS[i])
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        bg_frame = getFrameFromVideo(bg_video, OFFSETS[i])
-        bg_frame = cv.cvtColor(bg_frame, cv.COLOR_BGR2GRAY)
         # img but only the box
         # only_box = img[box.top:box.bottom, box.left:box.right]
         # cv.imshow("img_box", only_box)
@@ -41,12 +39,15 @@ def main():
             continue
         # Flow
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
+        bg_video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
         counter = 1
         while True:
             ret, frame = video.read()
-            if not ret:
+            ret2, bg_frame = bg_video.read()
+            if not ret or not ret2:
                 break
             frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+            bg_frame = cv.cvtColor(bg_frame, cv.COLOR_BGR2GRAY)
             p1, st, err = cv.calcOpticalFlowPyrLK(gray, frame_gray, pois, None, None, None,
                                                   (21, 21), 3,
                                                   (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
@@ -56,7 +57,7 @@ def main():
                 break
 
             good_new = p1[st == 1]
-            if not displayFrame(False, frame, pois, good_new, st):
+            if not displayFrame(True, frame, pois, good_new, st):
                 break
 
             # adds bounding box
@@ -70,7 +71,8 @@ def main():
             # cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter % 1000 == 0:
+            if counter % 25 == 0:
+                cv.imshow("bg_frame", bg_frame)
                 pois = getPois(gray, new_box, bg_frame)
                 if pois is None:
                     pois = good_new.reshape(-1, 1, 2)

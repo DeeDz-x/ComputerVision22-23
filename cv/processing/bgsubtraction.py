@@ -6,46 +6,15 @@ import numpy as np
 from cv.utils.fileHandler import createOutFolder
 
 
-def opencvBGSub_MOG2(video: cv.VideoCapture, fps: int = 30, **kwargs):
-    backsub = cv.createBackgroundSubtractorMOG2(
-        kwargs.get('history', None),
-        kwargs.get('varThreshold', 200),
-        kwargs.get('detectShadows', False)
-    )
-
-    masks = []
-    while video.isOpened():
-        ret, frame = video.read()
-        if not ret:
-            break
-
-        kernelSize = kwargs.get('kernelSize', 5)
-        channel = cv.GaussianBlur(frame, (kernelSize, kernelSize), kwargs.get('sigmaX', 0))
-
-        fgMask = backsub.apply(channel, learningRate=kwargs.get('learningRate', -1))
-
-        # Prepare the image for matching
-        if kwargs.get('prepareMatching', False):
-            prepareMatching(fgMask)
-
-        masks.append(fgMask)
-
-        if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):
-            break
-
-    return masks
-
-
-# returns video
-def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCache: bool = False,
-                   **kwargs) -> cv.VideoCapture:
-    cached_video, cacheName, cachePath = loadCache("KNN", videoId, genNewCache, kwargs)
+def opencvBGSubMOG2(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCache: bool = False,
+                    **kwargs) -> cv.VideoCapture:
+    cached_video, cacheName, cachePath = loadCache("MOG2", videoId, genNewCache, kwargs)
     if cached_video is not None:
         return cached_video
 
-    backsub = cv.createBackgroundSubtractorKNN(
+    backsub = cv.createBackgroundSubtractorMOG2(
         kwargs.get('history', None),
-        kwargs.get('dist2Threshold', None),
+        kwargs.get('varThreshold', 16),
         kwargs.get('detectShadows', False)
     )
 
@@ -71,18 +40,70 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
             break
 
     # saves video file
+    createCache(cacheName, cachePath, masks, videoId)
+
+    # load video to return
+    video = cv.VideoCapture(cachePath)
+    return video
+
+
+def createCache(cacheName, cachePath, data, videoId):
     createOutFolder('cache')
     createOutFolder(f'cache/{videoId}')
     if os.path.isfile(cachePath):
-        print("Overwriting Cache with name: " + cacheName)
+        print("Overwriting Cache with name: " + cacheName, end="")
         os.remove(cachePath)
+    else:
+        print("Creating Cache with name: " + cacheName, end="")
     # Create video
-    writer = cv.VideoWriter(cachePath, cv.VideoWriter_fourcc(*'FFV1'), 30, (masks[0].shape[1], masks[0].shape[0]))
-    for mask in masks:
+    writer = cv.VideoWriter(cachePath, cv.VideoWriter_fourcc(*'FFV1'), 30, (data[0].shape[1], data[0].shape[0]))
+    ten_th = len(data) // 10
+    for i, mask in enumerate(data):
         writer.write(mask)
+        if i % ten_th == 0:
+            print("-", end="")
     writer.release()
     if not os.path.isfile(cachePath):
         raise Exception("Cache file could not be created at Path: " + cachePath)
+    print("> Done")
+
+
+# returns video
+def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCache: bool = False,
+                   **kwargs) -> cv.VideoCapture:
+    cached_video, cacheName, cachePath = loadCache("KNN", videoId, genNewCache, kwargs)
+    if cached_video is not None:
+        return cached_video
+
+    backsub = cv.createBackgroundSubtractorKNN(
+        kwargs.get('history', None),
+        kwargs.get('dist2Threshold', 400),
+        kwargs.get('detectShadows', False)
+    )
+
+    masks = []
+    video.set(cv.CAP_PROP_POS_FRAMES, 0)
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize", 5), kwargs.get("kernelSize", 5)))
+    while video.isOpened():
+        ret, frame = video.read()
+        if not ret:
+            break
+
+        fgMask = backsub.apply(frame, learningRate=kwargs.get('learningRate', -1))
+
+        fgMask = cv.morphologyEx(fgMask, cv.MORPH_OPEN, kernel)
+
+        # Prepare the image for matching
+        if kwargs.get('prepareMatching', False):
+            prepareMatching(fgMask)
+
+        masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
+
+        if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):
+            break
+
+    # saves video file
+    createCache(cacheName, cachePath, masks, videoId)
 
     # load video to return
     video = cv.VideoCapture(cachePath)
@@ -91,6 +112,7 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
 
 def loadCache(func_name: str, videoId: int, genNewCache: bool, kwargs: dict):
     kwargs.pop('display', None)
+    kwargs.pop('genNewCache', None)
     kwargs_str = str(kwargs).replace(" ", "_").replace(":", "_").replace(",", "_").replace("=", "_").replace("{", "_") \
         .replace("}", "_").replace("'", "").replace("_", "")
     cacheName = f'{func_name}__{kwargs_str}.avi'

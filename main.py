@@ -4,7 +4,7 @@ import timeit
 import cv2 as cv
 import numpy as np
 
-from cv.processing.bgsubtraction import opencvBGSubKNN
+from cv.processing.bgsubtraction import opencvBGSubMOG2
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
 from cv.utils.video import getFrameFromVideo
@@ -23,7 +23,9 @@ def main():
 
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
-        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=0.05, fps=30, dist2Threshold=1200, kernelSize=5)
+        print(f'Processing video {i + 1} of {len(video_inputs)}')
+        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0, fps=30, varThreshold=16,
+                                   genNewCache=True)
         boxes: list[BoundingBox] = bboxes[i]
         latestBox = boxes[0]
 
@@ -32,7 +34,6 @@ def main():
         # img but only the box
         # only_box = img[box.top:box.bottom, box.left:box.right]
         # cv.imshow("img_box", only_box)
-        print("First Box " + str(latestBox))
         pois = getPois(gray, latestBox, gray)
         if pois is None:
             print("No POIs")
@@ -68,7 +69,7 @@ def main():
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            #if not playImageAsVideo(bb_img, 30, "BB"):
+            # if not playImageAsVideo(bb_img, 30, "BB"):
             #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray

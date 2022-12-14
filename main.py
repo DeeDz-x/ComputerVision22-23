@@ -24,8 +24,7 @@ def main():
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
         print(f'Processing video {i + 1} of {len(video_inputs)}')
-        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0, fps=30, varThreshold=16,
-                                   genNewCache=True)
+        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0, fps=30, varThreshold=16)
         boxes: list[BoundingBox] = bboxes[i]
         latestBox = boxes[0]
 

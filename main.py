@@ -21,11 +21,6 @@ def main():
     bboxes = [vid[0] for vid in loaded_data]
     video_inputs = [vid[1] for vid in loaded_data]
 
-    # Setup Bounding Boxes
-    # INIT_OFFSET = 5  # Offset to start at
-    # boxesForVideo: list[BoundingBox] = bboxes[VIDEO_ID]
-    # initBox = boxesForVideo[INIT_OFFSET]
-
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
         bg_video = opencvBGSubKNN(video, i, display=False, learningRate=-1, fps=30, dist2Threshold=1200)
@@ -58,30 +53,19 @@ def main():
                 break
 
             good_new = p1[st == 1]
-            good_old = pois[st == 1]
-            for (new, old) in zip(good_new, good_old):
-                a, b = new.ravel()
-                c, d = old.ravel()
-                cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
-                cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
-            # cv.imshow("calcOpticalFlowPyrLK", gray)
-
-            if not playImageAsVideo(frame, fps=30):
+            if not displayFrame(False, frame, pois, good_new, st):
                 break
-
-            gray = frame_gray
 
             # adds bounding box
             bb = cv.boundingRect(good_new)
             new_box = BoundingBox(counter + OFFSETS[i], 1, bb[0], bb[1], bb[2], bb[3])
-            try:
+            if counter < len(boxes):
                 gt_box = boxes[counter]
                 scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
-            except IndexError:
-                pass
-            bb_img = new_box.addBoxToImage(frame, copy=True)
-            cv.imshow("boundingRect", bb_img)
+            # bb_img = new_box.addBoxToImage(frame, copy=True)
+            # cv.imshow("boundingRect", bb_img)
             pois = good_new.reshape(-1, 1, 2)
+            gray = frame_gray
             if counter % 1000 == 0:
                 pois = getPois(gray, new_box, bg_frame)
                 if pois is None:
@@ -91,6 +75,21 @@ def main():
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
     print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
+
+
+def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: np.ndarray, st: int):
+    if not display:
+        return True
+    good_old = pois[st == 1]
+    for (new, old) in zip(good_new, good_old):
+        a, b = new.ravel()
+        c, d = old.ravel()
+        cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
+        cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
+
+    if not playImageAsVideo(frame, fps=30):
+        return False
+    return True
 
 
 def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):

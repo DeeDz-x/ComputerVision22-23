@@ -4,6 +4,8 @@ from numpy import ndarray
 
 class BoundingBox:
     def __init__(self, frame, box_id, left, top, width, height):
+        left = max(left, 0)
+        top = max(top, 0)
         self.frame = frame
         self.box_id = box_id
         self.left = left

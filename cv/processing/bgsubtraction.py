@@ -34,6 +34,9 @@ def opencvBGSubMOG2(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewC
         if kwargs.get('prepareMatching', False):
             prepareMatching(fgMask)
 
+        # remove shadows (all gray to black)
+        fgMask[fgMask == 127] = 0
+
         masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
 
         if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):

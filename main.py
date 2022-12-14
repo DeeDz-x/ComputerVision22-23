@@ -26,14 +26,22 @@ def main():
         print(f'Processing video {i + 1} of {len(video_inputs)}')
         bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0, fps=30, varThreshold=16)
         boxes: list[BoundingBox] = bboxes[i]
-        latestBox = boxes[0]
+        initBox = boxes[0]
 
         img = getFrameFromVideo(video, OFFSETS[i])
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        # img but only the box
-        # only_box = img[box.top:box.bottom, box.left:box.right]
-        # cv.imshow("img_box", only_box)
-        pois = getPois(gray, latestBox, gray)
+        gt_box = boxes[0]
+        # image only inside gt_box
+        gt_mask = np.zeros(img.shape, dtype=np.uint8)
+        cv.rectangle(gt_mask, (gt_box.left, gt_box.top), (gt_box.right, gt_box.bottom), (255, 255, 255), -1)
+        gt_img = cv.bitwise_and(img, gt_mask)
+        # cut out only the gt_box
+        gt_img = gt_img[gt_box.top:gt_box.bottom, gt_box.left:gt_box.right]
+        # histogram for backprojection
+        hsv = cv.cvtColor(gt_img, cv.COLOR_BGR2HSV)
+        roi_hist = cv.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+        cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
+        pois = getPois(gray, initBox, gray)
         if pois is None:
             print("!!No POIs!!")
             continue
@@ -57,8 +65,8 @@ def main():
                 break
 
             good_new = p1[st == 1]
-            # if not displayFrame(True, frame, pois, good_new, st):
-            #    break
+            if not displayFrame(True, frame, pois, good_new, st):
+                break
 
             # adds bounding box
             bb = cv.boundingRect(good_new)
@@ -68,12 +76,31 @@ def main():
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            # if not playImageAsVideo(bb_img, 30, "BB"):
+            #if not playImageAsVideo(bb_img, 30, "BB"):
             #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter % 100 == 0:
-                cv.imshow("bg_frame", bg_frame)
+            if counter == 35:
+                # update histogram
+                box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
+                cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
+                             -1)
+                bg_box_img = cv.bitwise_and(bg_frame, box_mask)
+                hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+                # calc histo for hsv only in bg_box_img as mask
+                roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
+                cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
+            elif counter == 36:
+                # backprojection
+                dst = backProjection(roi_hist, frame)
+                # mean shift
+                ret, track_window = cv.meanShift(dst, (bb[0], bb[1], bb[2], bb[3]),
+                                                 (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1))
+                # Draw it on image
+                x, y, w, h = track_window
+                new_box = BoundingBox(counter + OFFSETS[i], 1, x, y, w, h)
+                cv.rectangle(frame, (x, y), (x + w, y + h), 255, 2)
+
                 pois = getPois(gray, new_box, bg_frame)
                 if pois is None:
                     pois = good_new.reshape(-1, 1, 2)
@@ -97,6 +124,12 @@ def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: n
     if not playImageAsVideo(frame, 30, "frame"):
         return False
     return True
+
+
+def backProjection(histogram: np.ndarray, img: np.ndarray):
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    dst = cv.calcBackProject([hsv], [0, 1], histogram, [0, 180, 0, 256], 1)
+    return dst
 
 
 def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):

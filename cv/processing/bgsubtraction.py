@@ -102,8 +102,10 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
         if kwargs.get('prepareMatching', False):
             prepareMatching(fgMask)
 
-        masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
+        #cv.imshow("fgMask", fgMask)
+        #cv.waitKey(25)
 
+        masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
         if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):
             break
 

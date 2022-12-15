@@ -13,8 +13,9 @@ from cv.utils.video import playImageAsVideo
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
 
-
+avgs = []
 def main():
+    global avgs
     # Read the images
     cur_path = IMAGES_PATH + 'data_ms3\\'
     loaded_data = loadFolderMileStone3(cur_path, printInfo=True)
@@ -94,8 +95,8 @@ def main():
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            if not playImageAsVideo(bb_img, 30, "BB"):
-                break
+            #if not playImageAsVideo(bb_img, 30, "BB"):
+            #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
             if counter == 20 or counter == 60 or counter == 120:
@@ -105,7 +106,6 @@ def main():
                              -1)
                 bg_box_img = cv.bitwise_and(bg_frame, box_mask)
                 hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-                cv.imshow("Bg Frame", bg_frame)
                 # calc histo for hsv only in bg_box_img as mask
                 roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
                 cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
@@ -128,7 +128,9 @@ def main():
             counter += 1
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
-    print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
+    avg = sum([sum(score) for score in scores]) / sum([len(score) for score in scores])
+    print(f'Avg. Score for all videos: {avg}')
+    avgs.append(avg)
 
 
 def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:

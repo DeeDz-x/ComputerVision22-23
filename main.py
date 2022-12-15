@@ -129,7 +129,7 @@ def main():
                 # calc histo for hsv only in bg_box_img as mask
                 roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
                 cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
-            if counter in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == 0:
+            elif counter in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == 0:
                 # backprojection
                 dst = backProjection(roi_hist, frame, bg_frame)
                 # mean shift
@@ -194,7 +194,7 @@ def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
     combined_mask = cv.bitwise_and(mask, gtmask)
     # cv.imshow("Mask", combined_mask)
-    pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=combined_mask, useHarrisDetector=True)
+    pois = cv.goodFeaturesToTrack(img, 250, 0.001, 2, mask=combined_mask, useHarrisDetector=True)
     return pois
 
 

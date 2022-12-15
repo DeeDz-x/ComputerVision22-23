@@ -76,8 +76,13 @@ def main():
 
             good_new = p1[st == 1]
             good_old = pois[st == 1]
-            if not displayFrame(True, frame, pois, good_new, st):
-                break
+            for (new, old) in zip(good_new, good_old):
+                a, b = new.ravel()
+                c, d = old.ravel()
+                cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
+                cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
+            #if not displayFrame(True, frame, pois, good_new, st):
+            #    break
 
             # check if suddenly the direction of the flow changes
             if len(good_new) > 0:
@@ -169,12 +174,6 @@ def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:
 def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: np.ndarray, st: int):
     if not display:
         return True
-    good_old = pois[st == 1]
-    for (new, old) in zip(good_new, good_old):
-        a, b = new.ravel()
-        c, d = old.ravel()
-        cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
-        cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
 
     if not playImageAsVideo(frame, 30, "frame"):
         return False

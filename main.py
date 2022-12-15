@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import os
 import timeit
 
@@ -15,23 +16,58 @@ IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
 
 avgs = []
-UPDATE_INTERVAL = 25
-CUSTOM_UPDATES = [10, 20]
 
 
-def main():
+# possible vars:
+# (learningRate, dist2Threshold, kernelSize_open, kernelSize_close,) UPDATE_INTERVAL, CUSTOM_UPDATES, flowSize, flowLevel,
+# changeThreshold, filterN, filterRadius, poiMaxCorners, poiQL, poiMinDist
+# (14)10 Parameters
+
+def getParams(**kwargs):
+    ret_dir = {
+        'learningRate': 0.005,
+        'dist2Threshold': 400,
+        'kernelSize_open': 7,
+        'kernelSize_close': 12,
+        'UPDATE_INTERVAL': 25,
+        'CUSTOM_UPDATES': [10, 20],
+        'flowSize': 21,
+        'flowLevel': 3,
+        'changeThreshold': 180,
+        'filterN': 6,
+        'filterRadius': 50,
+        'poiMaxCorners': 50,
+        'poiQL': 0.001,
+        'poiMinDist': 2
+    }
+    # defaults
+    # update with kwargs
+    for key, value in kwargs.items():
+        ret_dir[key] = value
+    return ret_dir
+
+
+def startTracking(params, name='Default'):
     global avgs
     # Read the images
     cur_path = IMAGES_PATH + 'data_ms3\\'
-    loaded_data = loadFolderMileStone3(cur_path, printInfo=True)
+    loaded_data = loadFolderMileStone3(cur_path, printInfo=False)
     bboxes = [vid[0] for vid in loaded_data]
     video_inputs = [vid[1] for vid in loaded_data]
 
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
-        print(f'Processing video {i + 1} of {len(video_inputs)}')
-        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=0.005, fps=30, history=None, dist2Threshold=400,
-                                  kernelSize_open=7, kernelSize_close=12)
+        #print(f'Processing video {i + 1} of {len(video_inputs)}')
+        bg_video = opencvBGSubKNN(video,
+                                  i,
+                                  display=False,
+                                  learningRate=params['learningRate'],
+                                  fps=30,
+                                  history=None,
+                                  dist2Threshold=params['dist2Threshold'],
+                                  kernelSize_open=params['kernelSize_open'],
+                                  kernelSize_close=params['kernelSize_close'],
+                                  )
         # GT boxes
         boxes: list[BoundingBox] = bboxes[i]
         initBox = boxes[0]
@@ -50,7 +86,7 @@ def main():
         roi_hist = getHisto(gt_img)
 
         # Get initial points of interest
-        pois = getPois(gray, initBox, gray)
+        pois = getPois(gray, initBox, gray, params['poiMaxCorners'], params['poiQL'], params['poiMinDist'])
         if pois is None:
             failTracking("No POIs", scores, i, 0, boxes)
             continue
@@ -90,11 +126,11 @@ def main():
             # break
 
             # check if suddenly the direction of the flow changes
-            good_new = checkForSuddenFlowChange(good_new, good_old, 180)
+            good_new = checkForSuddenFlowChange(good_new, good_old, params['changeThreshold'])
 
             # if they have less than n neighbors in a radius of r, remove them
             if len(good_new) > 0:
-                good_new = filterPoints(good_new, 6, 50)
+                good_new = filterPoints(good_new, params['filterN'], params['filterRadius'])
             # if all points delete, try to restore old points
             if len(good_new) == 0:
                 good_new = p1[st == 1]
@@ -122,7 +158,8 @@ def main():
 
             # Update intervals
             # Update histogram before, actually interval update
-            if counter + 1 in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == UPDATE_INTERVAL - 1:
+            if counter + 1 in params['CUSTOM_UPDATES'] or counter % params['UPDATE_INTERVAL'] == params[
+                'UPDATE_INTERVAL'] - 1:
                 # Combine bg and current box
                 box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
                 cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
@@ -130,12 +167,12 @@ def main():
                 bg_box_img = cv.bitwise_and(bg_frame, box_mask)
 
                 roi_hist = getHisto(frame, bg_box_img)
-            elif counter in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == 0:
+            elif counter in params['CUSTOM_UPDATES'] or counter % params['UPDATE_INTERVAL'] == 0:
                 # backprojection
                 dst = backProjection(roi_hist, frame, bg_frame)
                 # mean shift
-                ret, track_window = cv.meanShift(dst, (
-                    new_box.left, new_box.top - (new_box.height // 2), new_box.width, new_box.height),
+                ret, track_window = cv.meanShift(dst, (new_box.left, new_box.top - (new_box.height // 2),
+                                                       new_box.width, new_box.height),
                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10,
                                                   1))
                 # Shift box
@@ -143,15 +180,15 @@ def main():
                 new_box = BoundingBox(counter + OFFSETS[i], 1, x, y, w, h)
 
                 # Update POIs
-                pois = getPois(gray, new_box, bg_frame)
+                pois = getPois(gray, new_box, bg_frame, params['poiMaxCorners'], params['poiQL'], params['poiMinDist'])
                 if pois is None:  # if failed to get POIs, try to get them from the last frame
                     pois = good_new.reshape(-1, 1, 2)
 
             counter += 1
-        print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
+        print(f'{name} -- Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
     avg = sum([sum(score) for score in scores]) / sum([len(score) for score in scores])
-    print(f'Avg. Score for all videos: {avg}')
+    print(f'{name} -- Avg. Score for all videos: {avg}')
     avgs.append(avg)
 
 
@@ -163,5 +200,28 @@ def calcScore(box, scoreList, vidId, curIndex, gt_boxes):
     return True
 
 
+def startTest(test):
+    print(f'Running {test.__name__}')
+    print(f'{test.__name__} -- Total time:', timeit.timeit(test, number=1), 'seconds')
+
+
+def test1():
+    params = getParams()
+    startTracking(params, 'Test 1')
+
+
+def test2():
+    params = getParams()
+    params['UPDATE_INTERVAL'] = 10
+    startTracking(params, 'Test 2')
+
+
+def main():
+    # pool
+    TESTS = [test1, test2]
+    pool = mp.Pool(processes=6)
+    pool.map(startTest, TESTS)
+
+
 if __name__ == '__main__':
-    print('\nTotal time:', timeit.timeit(main, number=1))
+    main()

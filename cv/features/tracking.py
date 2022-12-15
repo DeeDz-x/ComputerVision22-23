@@ -20,16 +20,16 @@ def getHisto(gt_img, mask=None):
     return roi_hist
 
 
-def opticalFlow(prevImg, frame_gray, points):
+def opticalFlow(prevImg, frame_gray, points, flowSize=21, flowLevel=3):
     p1, st, err = cv.calcOpticalFlowPyrLK(prevImg, frame_gray, points, None, None, None,
-                                          (21, 21), 3,
+                                          (flowSize, flowSize), flowLevel,
                                           (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
                                           0, 0.00001)
     return p1, st
 
 
 def failTracking(reason: str, scoresList, videoId: int, curIndex: int, gt_boxes: list[BoundingBox]):
-    print(f'!!{reason}!!')
+    # print(f'!!{reason}!!') //TODO: Enable after testing
     # add 0 for all remaining gt_boxes
     scoresList[videoId].extend([0 for _ in range(len(gt_boxes) - curIndex)])
 
@@ -60,11 +60,13 @@ def backProjection(histogram: np.ndarray, img: np.ndarray, bg: np.ndarray):
     return dst
 
 
-def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
+def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray, maxCorners: int = 50, qualityLevel: float = 0.001,
+            minDistance: int = 2):
     gtmask = np.zeros(img.shape, dtype=np.uint8)
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
     combined_mask = cv.bitwise_and(mask, gtmask)
     # cv.imshow("Mask", combined_mask)
-    pois = cv.goodFeaturesToTrack(img, 50, 0.001, 2, mask=combined_mask, useHarrisDetector=True, blockSize=3,
+    pois = cv.goodFeaturesToTrack(img, maxCorners, qualityLevel, minDistance, mask=combined_mask,
+                                  useHarrisDetector=True, blockSize=3,
                                   k=0.04)
     return pois

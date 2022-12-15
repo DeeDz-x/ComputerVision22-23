@@ -24,7 +24,7 @@ def main():
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
         print(f'Processing video {i + 1} of {len(video_inputs)}')
-        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0, fps=30, varThreshold=16)
+        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0.9, fps=30, varThreshold=16)
         boxes: list[BoundingBox] = bboxes[i]
         initBox = boxes[0]
 
@@ -65,7 +65,23 @@ def main():
                 break
 
             good_new = p1[st == 1]
-            if not displayFrame(True, frame, pois, good_new, st):
+            good_old = pois[st == 1]
+            # if not displayFrame(True, frame, pois, good_new, st):
+            #    break
+
+            # check if suddenly the direction of the flow changes
+            if len(good_new) > 0:
+                # calc the vector of the flow
+                flow_vector = good_new - good_old
+                if np.linalg.norm(flow_vector) > 225:
+                    print("Flow vector: ", np.linalg.norm(flow_vector))
+                    good_new = good_old
+
+            # only keep points with n neighbors
+            if len(good_new) > 3:
+                good_new = filterPoints(good_new, 3, 10)
+            if len(good_new) == 0:
+                print("!!No Points!!")
                 break
 
             # adds bounding box
@@ -76,7 +92,7 @@ def main():
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            #if not playImageAsVideo(bb_img, 30, "BB"):
+            # if not playImageAsVideo(bb_img, 30, "BB"):
             #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
@@ -95,7 +111,8 @@ def main():
                 dst = backProjection(roi_hist, frame)
                 # mean shift
                 ret, track_window = cv.meanShift(dst, (bb[0], bb[1], bb[2], bb[3]),
-                                                 (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1))
+                                                 (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10,
+                                                  1))  # TODO: check if this is correct
                 # Draw it on image
                 x, y, w, h = track_window
                 new_box = BoundingBox(counter + OFFSETS[i], 1, x, y, w, h)
@@ -109,6 +126,18 @@ def main():
         print(f'Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
     print(f'Avg. Score for all videos: {sum([sum(score) for score in scores]) / sum([len(score) for score in scores])}')
+
+
+def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:
+    filtered = []
+    for point in points:
+        neighbors = 0
+        for other in points:
+            if np.linalg.norm(point - other) < radius:
+                neighbors += 1
+        if neighbors >= n:
+            filtered.append(point)
+    return np.array(filtered)
 
 
 def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: np.ndarray, st: int):

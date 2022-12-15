@@ -14,6 +14,8 @@ IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
 
 avgs = []
+UPDATE_INTERVAL = 25
+CUSTOM_UPDATES = [10, 20]
 
 
 def main():
@@ -81,7 +83,7 @@ def main():
                 c, d = old.ravel()
                 cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
                 cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
-            #if not displayFrame(True, frame, pois, good_new, st):
+            # if not displayFrame(True, frame, pois, good_new, st):
             #    break
 
             # check if suddenly the direction of the flow changes
@@ -113,11 +115,11 @@ def main():
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            if not playImageAsVideo(bb_img, 30, "BB"):
-                break
+            # if not playImageAsVideo(bb_img, 30, "BB"):
+            #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter == 9 or counter % 25 == 24:
+            if counter + 1 in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == UPDATE_INTERVAL - 1:
                 # update histogram
                 box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
                 cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
@@ -127,7 +129,7 @@ def main():
                 # calc histo for hsv only in bg_box_img as mask
                 roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
                 cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
-            if counter == 10 or counter % 25 == 0:
+            if counter in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == 0:
                 # backprojection
                 dst = backProjection(roi_hist, frame, bg_frame)
                 # mean shift

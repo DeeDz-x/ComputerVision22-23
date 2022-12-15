@@ -14,6 +14,8 @@ IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
 
 avgs = []
+
+
 def main():
     global avgs
     # Read the images
@@ -33,6 +35,8 @@ def main():
         img = getFrameFromVideo(video, OFFSETS[i])
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         gt_box = boxes[0]
+        gt_height = gt_box.height
+        gt_width = gt_box.width
         # image only inside gt_box
         gt_mask = np.zeros(img.shape, dtype=np.uint8)
         cv.rectangle(gt_mask, (gt_box.left, gt_box.top), (gt_box.right, gt_box.bottom), (255, 255, 255), -1)
@@ -46,6 +50,8 @@ def main():
         pois = getPois(gray, initBox, gray)
         if pois is None:
             print("!!No POIs!!")
+            # add 0 for all remaining gt_boxes
+            scores[i] = [0 for _ in range(len(boxes))]
             continue
         # Flow
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
@@ -64,42 +70,49 @@ def main():
                                                   0, 0.00001)
             if p1 is None:
                 print("!!No Points!!")
+                # add 0 for all remaining gt_boxes
+                scores[i].extend([0 for _ in range(len(boxes) - counter)])
                 break
 
             good_new = p1[st == 1]
             good_old = pois[st == 1]
-            # if not displayFrame(True, frame, pois, good_new, st):
-            #    break
+            if not displayFrame(True, frame, pois, good_new, st):
+                break
 
             # check if suddenly the direction of the flow changes
             if len(good_new) > 0:
                 # calc the vector of the flow
                 flow_vector = good_new - good_old
-                if np.linalg.norm(flow_vector) > 225:
+                if np.linalg.norm(flow_vector) > 180:
                     good_new = good_old
 
             # if they have less than n neighbors in a radius of r, remove them
             if len(good_new) > 0:
-                good_new = filterPoints(good_new, 6, 100)
+                good_new = filterPoints(good_new, 6, 50)
             if len(good_new) == 0:
                 good_new = p1[st == 1]
                 if len(good_new) == 0:
                     print("!!!No Points!!!")
+                    # add 0 for all remaining gt_boxes
+                    scores[i].extend([0 for _ in range(len(boxes) - counter)])
                     break
 
             # adds bounding box
-            bb = cv.boundingRect(good_new)
-            new_box = BoundingBox(counter + OFFSETS[i], 1, bb[0], bb[1], bb[2], bb[3])
+            center_point_x = int(np.mean(good_new[:, 0]))
+            center_point_y = int(np.mean(good_new[:, 1]))
+            new_box = BoundingBox(counter + OFFSETS[i], 1, center_point_x - (gt_width // 2),
+                                  center_point_y,
+                                  gt_width, gt_height)
             if counter >= len(boxes):
                 break
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
             bb_img = new_box.addBoxToImage(frame, copy=True)
-            #if not playImageAsVideo(bb_img, 30, "BB"):
-            #    break
+            if not playImageAsVideo(bb_img, 30, "BB"):
+                break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter == 20 or counter == 60 or counter == 120:
+            if counter == 9 or counter % 25 == 24:
                 # update histogram
                 box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
                 cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
@@ -109,11 +122,12 @@ def main():
                 # calc histo for hsv only in bg_box_img as mask
                 roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
                 cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
-            if counter == 21 or counter == 61 or counter == 121:
+            if counter == 10 or counter % 25 == 0:
                 # backprojection
-                dst = backProjection(roi_hist, frame)
+                dst = backProjection(roi_hist, frame, bg_frame)
                 # mean shift
-                ret, track_window = cv.meanShift(dst, (bb[0], bb[1], bb[2], bb[3]),
+                ret, track_window = cv.meanShift(dst, (
+                    new_box.left, new_box.top - (new_box.height // 2), new_box.width, new_box.height),
                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10,
                                                   1))  # TODO: check if this is correct
                 # Draw it on image
@@ -167,8 +181,9 @@ def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: n
     return True
 
 
-def backProjection(histogram: np.ndarray, img: np.ndarray):
+def backProjection(histogram: np.ndarray, img: np.ndarray, bg: np.ndarray):
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    hsv = cv.bitwise_and(hsv, hsv, mask=bg)
     dst = cv.calcBackProject([hsv], [0, 1], histogram, [0, 180, 0, 256], 1)
     return dst
 

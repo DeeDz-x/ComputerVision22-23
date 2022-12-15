@@ -8,7 +8,6 @@ from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
 from cv.utils.video import getFrameFromVideo
-from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
@@ -31,33 +30,34 @@ def main():
         print(f'Processing video {i + 1} of {len(video_inputs)}')
         bg_video = opencvBGSubKNN(video, i, display=False, learningRate=0.005, fps=30, history=None, dist2Threshold=400,
                                   kernelSize_open=7, kernelSize_close=12)
+        # GT boxes
         boxes: list[BoundingBox] = bboxes[i]
         initBox = boxes[0]
+        init_height = initBox.height
+        init_width = initBox.width
 
+        # Init frame
         img = getFrameFromVideo(video, OFFSETS[i])
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        gt_box = boxes[0]
-        gt_height = gt_box.height
-        gt_width = gt_box.width
-        # image only inside gt_box
+
+        # Setup histogram (Backprojection)
         gt_mask = np.zeros(img.shape, dtype=np.uint8)
-        cv.rectangle(gt_mask, (gt_box.left, gt_box.top), (gt_box.right, gt_box.bottom), (255, 255, 255), -1)
+        cv.rectangle(gt_mask, (initBox.left, initBox.top), (initBox.right, initBox.bottom), (255, 255, 255), -1)
         gt_img = cv.bitwise_and(img, gt_mask)
-        # cut out only the gt_box
-        gt_img = gt_img[gt_box.top:gt_box.bottom, gt_box.left:gt_box.right]
-        # histogram for backprojection
-        hsv = cv.cvtColor(gt_img, cv.COLOR_BGR2HSV)
-        roi_hist = cv.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
-        cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
+        gt_img = gt_img[initBox.top:initBox.bottom, initBox.left:initBox.right]
+        roi_hist = getHisto(gt_img)
+
+        # Get initial points of interest
         pois = getPois(gray, initBox, gray)
         if pois is None:
-            print("!!No POIs!!")
-            # add 0 for all remaining gt_boxes
-            scores[i] = [0 for _ in range(len(boxes))]
+            failTracking("No POIs", scores, i, 0, boxes)
             continue
-        # Flow
+
+        # Reset videos
         video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
         bg_video.set(cv.CAP_PROP_POS_FRAMES, OFFSETS[i])
+
+        # Main loop
         counter = 1
         while True:
             ret, frame = video.read()
@@ -66,69 +66,68 @@ def main():
                 break
             frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
             bg_frame = cv.cvtColor(bg_frame, cv.COLOR_BGR2GRAY)
-            p1, st, err = cv.calcOpticalFlowPyrLK(gray, frame_gray, pois, None, None, None,
-                                                  (21, 21), 3,
-                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
-                                                  0, 0.00001)
-            if p1 is None:
-                print("!!No Points!!")
-                # add 0 for all remaining gt_boxes
-                scores[i].extend([0 for _ in range(len(boxes) - counter)])
+
+            p1, st = opticalFlow(gray, frame_gray, pois)
+            if p1 is None:  # Optical flow failed
+                failTracking("No Points", scores, i, counter, boxes)
                 break
 
+            # Filter points from optical flow
             good_new = p1[st == 1]
             good_old = pois[st == 1]
+
+            # Print points to frame
             for (new, old) in zip(good_new, good_old):
                 a, b = new.ravel()
                 c, d = old.ravel()
                 cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
                 cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
-            #if not playImageAsVideo(frame, 30, "frame"):
-                #break
+
+            # Display frame
+            # if not playImageAsVideo(frame, 30, "frame"):
+            # break
 
             # check if suddenly the direction of the flow changes
-            if len(good_new) > 0:
-                # calc the vector of the flow
-                flow_vector = good_new - good_old
-                if np.linalg.norm(flow_vector) > 180:
-                    good_new = good_old
+            good_new = checkForSuddenFlowChange(good_new, good_old, 180)
 
             # if they have less than n neighbors in a radius of r, remove them
             if len(good_new) > 0:
                 good_new = filterPoints(good_new, 6, 50)
+            # if all points delete, try to restore old points
             if len(good_new) == 0:
                 good_new = p1[st == 1]
                 if len(good_new) == 0:
-                    print("!!!No Points!!!")
-                    # add 0 for all remaining gt_boxes
-                    scores[i].extend([0 for _ in range(len(boxes) - counter)])
+                    failTracking("No Points", scores, i, counter, boxes)
                     break
 
-            # adds bounding box
+            # add bounding box
             center_point_x = int(np.mean(good_new[:, 0]))
             center_point_y = int(np.mean(good_new[:, 1]))
-            new_box = BoundingBox(counter + OFFSETS[i], 1, center_point_x - (gt_width // 2),
+            new_box = BoundingBox(counter + OFFSETS[i], 1, center_point_x - (init_width // 2),
                                   center_point_y,
-                                  gt_width, gt_height)
-            if counter >= len(boxes):
+                                  init_width, init_height)
+
+            if not calcScore(new_box, scores, i, counter, boxes):
                 break
-            gt_box = boxes[counter]
-            scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
-            bb_img = new_box.addBoxToImage(frame, copy=True)
+
+            # Create img with new box (only for showing)
+            # bb_img = new_box.addBoxToImage(frame, copy=True)
             # if not playImageAsVideo(bb_img, 30, "BB"):
             #    break
+
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
+
+            # Update intervals
+            # Update histogram before, actually interval update
             if counter + 1 in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == UPDATE_INTERVAL - 1:
-                # update histogram
+                # Combine bg and current box
                 box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
                 cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
                              -1)
                 bg_box_img = cv.bitwise_and(bg_frame, box_mask)
-                hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-                # calc histo for hsv only in bg_box_img as mask
-                roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
-                cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
+
+                roi_hist = getHisto(frame, bg_box_img)
             elif counter in CUSTOM_UPDATES or counter % UPDATE_INTERVAL == 0:
                 # backprojection
                 dst = backProjection(roi_hist, frame, bg_frame)
@@ -136,14 +135,14 @@ def main():
                 ret, track_window = cv.meanShift(dst, (
                     new_box.left, new_box.top - (new_box.height // 2), new_box.width, new_box.height),
                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10,
-                                                  1))  # TODO: check if this is correct
-                # Draw it on image
+                                                  1))
+                # Shift box
                 x, y, w, h = track_window
                 new_box = BoundingBox(counter + OFFSETS[i], 1, x, y, w, h)
-                cv.rectangle(frame, (x, y), (x + w, y + h), 255, 2)
 
+                # Update POIs
                 pois = getPois(gray, new_box, bg_frame)
-                if pois is None:
+                if pois is None:  # if failed to get POIs, try to get them from the last frame
                     pois = good_new.reshape(-1, 1, 2)
 
             counter += 1
@@ -152,6 +151,44 @@ def main():
     avg = sum([sum(score) for score in scores]) / sum([len(score) for score in scores])
     print(f'Avg. Score for all videos: {avg}')
     avgs.append(avg)
+
+
+def calcScore(box, scoreList, vidId, curIndex, gt_boxes):
+    if curIndex >= len(gt_boxes):  # if outside evaluation range
+        return False
+    gt_box = gt_boxes[curIndex]
+    scoreList[vidId].append(BoundingBox.intersectionOverUnion(box, gt_box))
+    return True
+
+
+def checkForSuddenFlowChange(good_new, good_old, threshold=180):
+    if len(good_new) > 0:
+        # calc the vector of the flow
+        flow_vector = good_new - good_old
+        if np.linalg.norm(flow_vector) > threshold:
+            good_new = good_old
+    return good_new
+
+
+def getHisto(gt_img, mask=None):
+    hsv = cv.cvtColor(gt_img, cv.COLOR_BGR2HSV)
+    roi_hist = cv.calcHist([hsv], [0, 1], mask, [180, 256], [0, 180, 0, 256])
+    cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
+    return roi_hist
+
+
+def opticalFlow(prevImg, frame_gray, points):
+    p1, st, err = cv.calcOpticalFlowPyrLK(prevImg, frame_gray, points, None, None, None,
+                                          (21, 21), 3,
+                                          (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.01),
+                                          0, 0.00001)
+    return p1, st
+
+
+def failTracking(reason: str, scoresList, videoId: int, curIndex: int, gt_boxes: list[BoundingBox]):
+    print(f'!!{reason}!!')
+    # add 0 for all remaining gt_boxes
+    scoresList[videoId].extend([0 for _ in range(len(gt_boxes) - curIndex)])
 
 
 def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:

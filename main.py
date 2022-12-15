@@ -83,8 +83,8 @@ def main():
                 c, d = old.ravel()
                 cv.line(frame, (round(a), round(b)), (round(c), round(d)), (0, 0, 255), 2)
                 cv.circle(frame, (round(a), round(b)), 3, (255, 255, 255), -1)
-            # if not displayFrame(True, frame, pois, good_new, st):
-            #    break
+            #if not playImageAsVideo(frame, 30, "frame"):
+                #break
 
             # check if suddenly the direction of the flow changes
             if len(good_new) > 0:
@@ -173,15 +173,6 @@ def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:
     return np.array(filtered_points)
 
 
-def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: np.ndarray, st: int):
-    if not display:
-        return True
-
-    if not playImageAsVideo(frame, 30, "frame"):
-        return False
-    return True
-
-
 def backProjection(histogram: np.ndarray, img: np.ndarray, bg: np.ndarray):
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
     hsv = cv.bitwise_and(hsv, hsv, mask=bg)
@@ -194,7 +185,8 @@ def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
     combined_mask = cv.bitwise_and(mask, gtmask)
     # cv.imshow("Mask", combined_mask)
-    pois = cv.goodFeaturesToTrack(img, 250, 0.001, 2, mask=combined_mask, useHarrisDetector=True)
+    pois = cv.goodFeaturesToTrack(img, 250, 0.001, 2, mask=combined_mask, useHarrisDetector=True, blockSize=3,
+                                  k=0.04)
     return pois
 
 

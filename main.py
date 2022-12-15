@@ -24,7 +24,7 @@ def main():
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
         print(f'Processing video {i + 1} of {len(video_inputs)}')
-        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0.9, fps=30, varThreshold=16)
+        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0.9, fps=30, varThreshold=64)
         boxes: list[BoundingBox] = bboxes[i]
         initBox = boxes[0]
 
@@ -67,22 +67,23 @@ def main():
             good_new = p1[st == 1]
             good_old = pois[st == 1]
             # if not displayFrame(True, frame, pois, good_new, st):
-            #    break
+            #   break
 
             # check if suddenly the direction of the flow changes
             if len(good_new) > 0:
                 # calc the vector of the flow
                 flow_vector = good_new - good_old
                 if np.linalg.norm(flow_vector) > 225:
-                    print("Flow vector: ", np.linalg.norm(flow_vector))
                     good_new = good_old
 
-            # only keep points with n neighbors
-            if len(good_new) > 3:
-                good_new = filterPoints(good_new, 3, 10)
+            # if they have less than n neighbors in a radius of r, remove them
+            if len(good_new) > 0:
+                good_new = filterPoints(good_new, 4, 75)
             if len(good_new) == 0:
-                print("!!No Points!!")
-                break
+                good_new = p1[st == 1]
+                if len(good_new) == 0:
+                    print("!!!No Points!!!")
+                    break
 
             # adds bounding box
             bb = cv.boundingRect(good_new)
@@ -91,12 +92,12 @@ def main():
                 break
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
-            bb_img = new_box.addBoxToImage(frame, copy=True)
+            # bb_img = new_box.addBoxToImage(frame, copy=True)
             # if not playImageAsVideo(bb_img, 30, "BB"):
             #    break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter == 35:
+            if counter == 20:
                 # update histogram
                 box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
                 cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
@@ -106,7 +107,7 @@ def main():
                 # calc histo for hsv only in bg_box_img as mask
                 roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
                 cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
-            elif counter == 36:
+            elif counter == 21:
                 # backprojection
                 dst = backProjection(roi_hist, frame)
                 # mean shift
@@ -129,15 +130,22 @@ def main():
 
 
 def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:
-    filtered = []
+    """
+    Filters points that have less than n neighbors in a radius of r
+    :param points: points to filter
+    :param n: number of neighbors
+    :param radius: search radius
+    :return: filtered points
+    """
+    filtered_points = []
     for point in points:
         neighbors = 0
-        for other in points:
-            if np.linalg.norm(point - other) < radius:
+        for other_point in points:
+            if np.linalg.norm(point - other_point) < radius:
                 neighbors += 1
         if neighbors >= n:
-            filtered.append(point)
-    return np.array(filtered)
+            filtered_points.append(point)
+    return np.array(filtered_points)
 
 
 def displayFrame(display: bool, frame: np.ndarray, pois: np.ndarray, good_new: np.ndarray, st: int):

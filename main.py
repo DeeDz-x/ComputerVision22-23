@@ -79,7 +79,7 @@ def main():
 
             # if they have less than n neighbors in a radius of r, remove them
             if len(good_new) > 0:
-                good_new = filterPoints(good_new, 4, 75)
+                good_new = filterPoints(good_new, 6, 100)
             if len(good_new) == 0:
                 good_new = p1[st == 1]
                 if len(good_new) == 0:
@@ -98,17 +98,18 @@ def main():
                 break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
-            if counter == 20:
+            if counter == 20 or counter == 60 or counter == 120:
                 # update histogram
                 box_mask = np.zeros(bg_frame.shape, dtype=np.uint8)
                 cv.rectangle(box_mask, (new_box.left, new_box.top), (new_box.right, new_box.bottom), (255, 255, 255),
                              -1)
                 bg_box_img = cv.bitwise_and(bg_frame, box_mask)
                 hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+                cv.imshow("Bg Frame", bg_frame)
                 # calc histo for hsv only in bg_box_img as mask
                 roi_hist = cv.calcHist([hsv], [0, 1], bg_box_img, [180, 256], [0, 180, 0, 256])
                 cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
-            elif counter == 21:
+            if counter == 21 or counter == 61 or counter == 121:
                 # backprojection
                 dst = backProjection(roi_hist, frame)
                 # mean shift
@@ -175,7 +176,7 @@ def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
     combined_mask = cv.bitwise_and(mask, gtmask)
     # cv.imshow("Mask", combined_mask)
-    pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=combined_mask)
+    pois = cv.goodFeaturesToTrack(img, 150, 0.0001, 2, mask=combined_mask, useHarrisDetector=True)
     return pois
 
 

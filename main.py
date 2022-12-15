@@ -1,6 +1,5 @@
 import multiprocessing as mp
 import os
-import timeit
 
 import cv2 as cv
 import numpy as np
@@ -11,11 +10,10 @@ from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
 from cv.utils.video import getFrameFromVideo
+from matplotlib import pyplot as plt
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
-
-avgs = []
 
 
 # possible vars:
@@ -31,7 +29,7 @@ def getParams(**kwargs):
         'kernelSize_close': 12,
         'UPDATE_INTERVAL': 25,
         'CUSTOM_UPDATES': [10, 20],
-        'flowSize': 21,
+        'flowSize': 11,
         'flowLevel': 3,
         'changeThreshold': 180,
         'filterN': 6,
@@ -57,7 +55,7 @@ def startTracking(params, name='Default'):
 
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
-        #print(f'Processing video {i + 1} of {len(video_inputs)}')
+        # print(f'Processing video {i + 1} of {len(video_inputs)}')
         bg_video = opencvBGSubKNN(video,
                                   i,
                                   display=False,
@@ -105,7 +103,7 @@ def startTracking(params, name='Default'):
             frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
             bg_frame = cv.cvtColor(bg_frame, cv.COLOR_BGR2GRAY)
 
-            p1, st = opticalFlow(gray, frame_gray, pois)
+            p1, st = opticalFlow(gray, frame_gray, pois, params['flowSize'], params['flowLevel'])
             if p1 is None:  # Optical flow failed
                 failTracking("No Points", scores, i, counter, boxes)
                 break
@@ -185,11 +183,19 @@ def startTracking(params, name='Default'):
                     pois = good_new.reshape(-1, 1, 2)
 
             counter += 1
-        print(f'{name} -- Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
+        # print(f'{name} -- Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
+    # plot pro video and frame
+    for i in range(len(scores)):
+        plt.plot(range(len(scores[i])), scores[i], label=f'Video {i}')
+        plt.xlabel('Frame')
+        plt.ylabel('Score')
+        plt.title('Score per frame')
+        plt.legend()
+        plt.show()
     avg = sum([sum(score) for score in scores]) / sum([len(score) for score in scores])
-    print(f'{name} -- Avg. Score for all videos: {avg}')
-    avgs.append(avg)
+    print(f'{name}\t{str(avg).replace(".", ",")}')
+    return avg
 
 
 def calcScore(box, scoreList, vidId, curIndex, gt_boxes):
@@ -201,26 +207,22 @@ def calcScore(box, scoreList, vidId, curIndex, gt_boxes):
 
 
 def startTest(test):
-    print(f'Running {test.__name__}')
-    print(f'{test.__name__} -- Total time:', timeit.timeit(test, number=1), 'seconds')
+    test()
+    # print(f'Running {test.__name__}')
+    # print(f'{test.__name__} -- Total time:', timeit.timeit(test, number=1), 'seconds')
 
-
-def test1():
+def test0():
     params = getParams()
-    startTracking(params, 'Test 1')
-
-
-def test2():
-    params = getParams()
-    params['UPDATE_INTERVAL'] = 10
-    startTracking(params, 'Test 2')
+    score = startTracking(params, str(0))
 
 
 def main():
     # pool
-    TESTS = [test1, test2]
+    TESTS = [test0]
     pool = mp.Pool(processes=6)
     pool.map(startTest, TESTS)
+    pool.close()
+    pool.join()
 
 
 if __name__ == '__main__':

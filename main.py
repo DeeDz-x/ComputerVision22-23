@@ -4,7 +4,7 @@ import timeit
 import cv2 as cv
 import numpy as np
 
-from cv.processing.bgsubtraction import opencvBGSubMOG2
+from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
 from cv.utils.video import getFrameFromVideo
@@ -24,7 +24,8 @@ def main():
     scores = [[] for _ in range(len(video_inputs))]
     for i, video in enumerate(video_inputs):
         print(f'Processing video {i + 1} of {len(video_inputs)}')
-        bg_video = opencvBGSubMOG2(video, i, display=False, learningRate=0.9, fps=30, varThreshold=64)
+        bg_video = opencvBGSubKNN(video, i, display=False, learningRate=0.005, fps=30, history=None, dist2Threshold=400,
+                                  kernelSize_open=7, kernelSize_close=12)
         boxes: list[BoundingBox] = bboxes[i]
         initBox = boxes[0]
 
@@ -67,7 +68,7 @@ def main():
             good_new = p1[st == 1]
             good_old = pois[st == 1]
             # if not displayFrame(True, frame, pois, good_new, st):
-            #   break
+            #    break
 
             # check if suddenly the direction of the flow changes
             if len(good_new) > 0:
@@ -92,9 +93,9 @@ def main():
                 break
             gt_box = boxes[counter]
             scores[i].append(BoundingBox.intersectionOverUnion(new_box, gt_box))
-            # bb_img = new_box.addBoxToImage(frame, copy=True)
-            # if not playImageAsVideo(bb_img, 30, "BB"):
-            #    break
+            bb_img = new_box.addBoxToImage(frame, copy=True)
+            if not playImageAsVideo(bb_img, 30, "BB"):
+                break
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
             if counter == 20:

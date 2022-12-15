@@ -35,7 +35,7 @@ def opencvBGSubMOG2(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewC
             prepareMatching(fgMask)
 
         # remove shadows (all gray to black)
-        fgMask[fgMask == 127] = 0
+        fgMask[fgMask == 127] = 255
 
         masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
 
@@ -86,7 +86,8 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
 
     masks = []
     video.set(cv.CAP_PROP_POS_FRAMES, 0)
-    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize", 5), kwargs.get("kernelSize", 5)))
+    kernel_open = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize_open", 5), kwargs.get("kernelSize_open", 5)))
+    kernel_close = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize_close", 5), kwargs.get("kernelSize_close", 5)))
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -94,7 +95,8 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
 
         fgMask = backsub.apply(frame, learningRate=kwargs.get('learningRate', -1))
 
-        fgMask = cv.morphologyEx(fgMask, cv.MORPH_OPEN, kernel)
+        fgMask = cv.morphologyEx(fgMask, cv.MORPH_OPEN, kernel_open)
+        fgMask = cv.morphologyEx(fgMask, cv.MORPH_CLOSE, kernel_close)
 
         # Prepare the image for matching
         if kwargs.get('prepareMatching', False):

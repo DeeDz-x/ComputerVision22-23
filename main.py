@@ -185,7 +185,7 @@ def getPois(img: np.ndarray, box: BoundingBox, mask: np.ndarray):
     cv.rectangle(gtmask, (box.left, box.top), (box.right, box.bottom), (255, 255, 255), -1)
     combined_mask = cv.bitwise_and(mask, gtmask)
     # cv.imshow("Mask", combined_mask)
-    pois = cv.goodFeaturesToTrack(img, 250, 0.001, 2, mask=combined_mask, useHarrisDetector=True, blockSize=3,
+    pois = cv.goodFeaturesToTrack(img, 50, 0.001, 2, mask=combined_mask, useHarrisDetector=True, blockSize=3,
                                   k=0.04)
     return pois
 

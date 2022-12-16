@@ -39,7 +39,7 @@ def getParams(**kwargs):
         "histoBins": None,
         "box_offset_x": 0,
         "box_offset_y": -11,
-        "mean_offset_x": 0,
+        "mean_offset_x": 1,
         "mean_offset_y": -16,
     }
     # defaults
@@ -174,7 +174,8 @@ def startTracking(params, name='Default'):
                 dst = backProjection(roi_hist, frame, bg_frame)
                 # mean shift
                 ret, track_window = cv.meanShift(dst, (new_box.left, new_box.top - (new_box.height // 2),
-                                                       new_box.width, new_box.height + params['mean_offset_y']),
+                                                       new_box.width + params['mean_offset_x'],
+                                                       new_box.height + params['mean_offset_y']),
                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10,
                                                   1))
                 # Shift box
@@ -217,13 +218,11 @@ def startTest(test):
 
 
 # Original
-# "mean_offset_y": -15
+# "box_offset_x": 0,
 def test1():
     params = getParams()
-    params["mean_offset_y"] = -15
 
-    startTracking(params, f'-15')
-
+    startTracking(params, f'Org')
 
 
 def main():

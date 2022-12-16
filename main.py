@@ -37,7 +37,7 @@ def getParams(**kwargs):
         'poiQL': 0.001,
         'poiMinDist': 2,
         "histoBins": None,
-        "box_offset_y": -10,
+        "box_offset_y": -11,
     }
     # defaults
     # update with kwargs

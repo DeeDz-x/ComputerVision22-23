@@ -37,6 +37,7 @@ def getParams(**kwargs):
         'poiQL': 0.001,
         'poiMinDist': 2,
         "histoBins": None,
+        "box_offset_y": -10,
     }
     # defaults
     # update with kwargs
@@ -140,7 +141,7 @@ def startTracking(params, name='Default'):
             center_point_x = int(np.mean(good_new[:, 0]))
             center_point_y = int(np.mean(good_new[:, 1]))
             new_box = BoundingBox(counter + OFFSETS[i], 1, center_point_x - (init_width // 2),
-                                  center_point_y,
+                                  center_point_y + params['box_offset_y'],
                                   init_width, init_height)
 
             if not calcScore(new_box, scores, i, counter, boxes):
@@ -213,18 +214,17 @@ def startTest(test):
 
 
 # Original
-# 'poiQL': 0.001,
+# "box_offset_y": -10,
 def test1():
     params = getParams()
-    params['poiQL'] = 0.0015
+    params['box_offset_y'] = -10
 
-    startTracking(params, f'0.0015')
-
+    startTracking(params, f'Original')
 
 
 def main():
     # pool
-    TESTS = [test1, test2, test3, test4, test5, test6]
+    TESTS = [test1]
     pool = mp.Pool(processes=6)
     pool.map(startTest, TESTS)
     pool.close()

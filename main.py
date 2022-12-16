@@ -38,7 +38,7 @@ def getParams(**kwargs):
         'poiMinDist': 2,
         "histoBins": None,
         "box_offset_x": 0,
-        "box_offset_y": -11,
+        "box_offset_y": -9,
         "mean_offset_x": 1,
         "mean_offset_y": -16,
     }
@@ -218,12 +218,11 @@ def startTest(test):
 
 
 # Original
-# "box_offset_x": 0,
+# "box_offset_y": -9,
 def test1():
     params = getParams()
 
     startTracking(params, f'Org')
-
 
 def main():
     # pool

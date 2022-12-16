@@ -37,7 +37,10 @@ def getParams(**kwargs):
         'poiQL': 0.001,
         'poiMinDist': 2,
         "histoBins": None,
+        "box_offset_x": 0,
         "box_offset_y": -11,
+        "mean_offset_x": 0,
+        "mean_offset_y": -16,
     }
     # defaults
     # update with kwargs
@@ -140,7 +143,7 @@ def startTracking(params, name='Default'):
             # add bounding box
             center_point_x = int(np.mean(good_new[:, 0]))
             center_point_y = int(np.mean(good_new[:, 1]))
-            new_box = BoundingBox(counter + OFFSETS[i], 1, center_point_x - (init_width // 2),
+            new_box = BoundingBox(counter + OFFSETS[i], 1, center_point_x - (init_width // 2) + params['box_offset_x'],
                                   center_point_y + params['box_offset_y'],
                                   init_width, init_height)
 
@@ -171,7 +174,7 @@ def startTracking(params, name='Default'):
                 dst = backProjection(roi_hist, frame, bg_frame)
                 # mean shift
                 ret, track_window = cv.meanShift(dst, (new_box.left, new_box.top - (new_box.height // 2),
-                                                       new_box.width, new_box.height),
+                                                       new_box.width, new_box.height + params['mean_offset_y']),
                                                  (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10,
                                                   1))
                 # Shift box
@@ -214,12 +217,13 @@ def startTest(test):
 
 
 # Original
-# "box_offset_y": -10,
+# "mean_offset_y": -15
 def test1():
     params = getParams()
-    params['box_offset_y'] = -10
+    params["mean_offset_y"] = -15
 
-    startTracking(params, f'Original')
+    startTracking(params, f'-15')
+
 
 
 def main():

@@ -35,7 +35,8 @@ def getParams(**kwargs):
         'filterRadius': 44,
         'poiMaxCorners': 50,
         'poiQL': 0.001,
-        'poiMinDist': 2
+        'poiMinDist': 2,
+        "histoBins": None,
     }
     # defaults
     # update with kwargs
@@ -80,7 +81,7 @@ def startTracking(params, name='Default'):
         cv.rectangle(gt_mask, (initBox.left, initBox.top), (initBox.right, initBox.bottom), (255, 255, 255), -1)
         gt_img = cv.bitwise_and(img, gt_mask)
         gt_img = gt_img[initBox.top:initBox.bottom, initBox.left:initBox.right]
-        roi_hist = getHisto(gt_img)
+        roi_hist = getHisto(gt_img, binSize=params['histoBins'])
 
         # Get initial points of interest
         pois = getPois(gray, initBox, gray, params['poiMaxCorners'], params['poiQL'], params['poiMinDist'])
@@ -163,7 +164,7 @@ def startTracking(params, name='Default'):
                              -1)
                 bg_box_img = cv.bitwise_and(bg_frame, box_mask)
 
-                roi_hist = getHisto(frame, bg_box_img)
+                roi_hist = getHisto(frame, bg_box_img, params['histoBins'])
             elif counter in params['CUSTOM_UPDATES'] or counter % params['UPDATE_INTERVAL'] == 0:
                 # backprojection
                 dst = backProjection(roi_hist, frame, bg_frame)
@@ -211,66 +212,19 @@ def startTest(test):
     # print(f'{test.__name__} -- Total time:', timeit.timeit(test, number=1), 'seconds')
 
 
+# Original
+# 'poiQL': 0.001,
 def test1():
     params = getParams()
-    params['changeThreshold'] = 100
-    score = startTracking(params, str(100))
+    params['poiQL'] = 0.0015
 
-def test2():
-    params = getParams()
-    params['changeThreshold'] = 110
-    score = startTracking(params, str(110))
-
-def test3():
-    params = getParams()
-    params['changeThreshold'] = 120
-    score = startTracking(params, str(120))
-
-def test4():
-    params = getParams()
-    params['changeThreshold'] = 130
-    score = startTracking(params, str(130))
-
-def test5():
-    params = getParams()
-    params['changeThreshold'] = 140
-    score = startTracking(params, str(140))
-
-def test6():
-    params = getParams()
-    params['changeThreshold'] = 150
-    score = startTracking(params, str(150))
-
-def test7():
-    params = getParams()
-    params['changeThreshold'] = 160
-    score = startTracking(params, str(160))
-
-def test8():
-    params = getParams()
-    params['changeThreshold'] = 170
-    score = startTracking(params, str(170))
-
-def test9():
-    params = getParams()
-    params['changeThreshold'] = 180
-    score = startTracking(params, str(180))
-
-def test10():
-    params = getParams()
-    params['changeThreshold'] = 190
-    score = startTracking(params, str(190))
-
-def test11():
-    params = getParams()
-    params['changeThreshold'] = 200
-    score = startTracking(params, str(200))
+    startTracking(params, f'0.0015')
 
 
 
 def main():
     # pool
-    TESTS = [test1, test2, test3, test4, test5, test6, test7, test8, test9, test10, test11]
+    TESTS = [test1, test2, test3, test4, test5, test6]
     pool = mp.Pool(processes=6)
     pool.map(startTest, TESTS)
     pool.close()

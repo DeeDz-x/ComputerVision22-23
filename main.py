@@ -10,7 +10,6 @@ from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
 from cv.utils.video import getFrameFromVideo
-from matplotlib import pyplot as plt
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
@@ -33,7 +32,7 @@ def getParams(**kwargs):
         'flowLevel': 3,
         'changeThreshold': 180,
         'filterN': 6,
-        'filterRadius': 50,
+        'filterRadius': 44,
         'poiMaxCorners': 50,
         'poiQL': 0.001,
         'poiMinDist': 2
@@ -186,13 +185,13 @@ def startTracking(params, name='Default'):
         # print(f'{name} -- Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
 
     # plot pro video and frame
-    for i in range(len(scores)):
+    """for i in range(len(scores)):
         plt.plot(range(len(scores[i])), scores[i], label=f'Video {i}')
         plt.xlabel('Frame')
         plt.ylabel('Score')
         plt.title('Score per frame')
         plt.legend()
-        plt.show()
+        plt.show()"""
     avg = sum([sum(score) for score in scores]) / sum([len(score) for score in scores])
     print(f'{name}\t{str(avg).replace(".", ",")}')
     return avg
@@ -211,14 +210,67 @@ def startTest(test):
     # print(f'Running {test.__name__}')
     # print(f'{test.__name__} -- Total time:', timeit.timeit(test, number=1), 'seconds')
 
-def test0():
+
+def test1():
     params = getParams()
-    score = startTracking(params, str(0))
+    params['changeThreshold'] = 100
+    score = startTracking(params, str(100))
+
+def test2():
+    params = getParams()
+    params['changeThreshold'] = 110
+    score = startTracking(params, str(110))
+
+def test3():
+    params = getParams()
+    params['changeThreshold'] = 120
+    score = startTracking(params, str(120))
+
+def test4():
+    params = getParams()
+    params['changeThreshold'] = 130
+    score = startTracking(params, str(130))
+
+def test5():
+    params = getParams()
+    params['changeThreshold'] = 140
+    score = startTracking(params, str(140))
+
+def test6():
+    params = getParams()
+    params['changeThreshold'] = 150
+    score = startTracking(params, str(150))
+
+def test7():
+    params = getParams()
+    params['changeThreshold'] = 160
+    score = startTracking(params, str(160))
+
+def test8():
+    params = getParams()
+    params['changeThreshold'] = 170
+    score = startTracking(params, str(170))
+
+def test9():
+    params = getParams()
+    params['changeThreshold'] = 180
+    score = startTracking(params, str(180))
+
+def test10():
+    params = getParams()
+    params['changeThreshold'] = 190
+    score = startTracking(params, str(190))
+
+def test11():
+    params = getParams()
+    params['changeThreshold'] = 200
+    score = startTracking(params, str(200))
+
 
 
 def main():
     # pool
-    TESTS = [test0]
+    TESTS = [test1, test2, test3, test4, test5, test6, test7, test8, test9, test10, test11]
     pool = mp.Pool(processes=6)
     pool.map(startTest, TESTS)
     pool.close()

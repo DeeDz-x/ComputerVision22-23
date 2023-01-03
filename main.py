@@ -9,7 +9,8 @@ from cv.features.tracking import checkForSuddenFlowChange, getHisto, opticalFlow
 from cv.processing.bgsubtraction import opencvBGSubKNN
 from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone3
-from cv.utils.video import getFrameFromVideo
+from cv.utils.video import getFrameFromVideo, playImageAsVideo
+from matplotlib import pyplot as plt
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 OFFSETS = [19, 41, 24, 74, 311]
@@ -151,9 +152,9 @@ def startTracking(params, name='Default'):
                 break
 
             # Create img with new box (only for showing)
-            # bb_img = new_box.addBoxToImage(frame, copy=True)
-            # if not playImageAsVideo(bb_img, 30, "BB"):
-            #    break
+            bb_img = new_box.addBoxToImage(frame, copy=True)
+            if not playImageAsVideo(bb_img, 30, "BB"):
+                break
 
             pois = good_new.reshape(-1, 1, 2)
             gray = frame_gray
@@ -188,16 +189,18 @@ def startTracking(params, name='Default'):
                     pois = good_new.reshape(-1, 1, 2)
 
             counter += 1
-        # print(f'{name} -- Avg. Score for video {i}: {sum(scores[i]) / len(scores[i])}')
+        inner_avg = sum(scores[i]) / len(scores[i])
+        inner_avg = str(inner_avg).replace(".", ",")
+        print(f'{i}\t{inner_avg}')
 
     # plot pro video and frame
-    """for i in range(len(scores)):
+    for i in range(len(scores)):
         plt.plot(range(len(scores[i])), scores[i], label=f'Video {i}')
         plt.xlabel('Frame')
         plt.ylabel('Score')
         plt.title('Score per frame')
         plt.legend()
-        plt.show()"""
+        plt.show()
     avg = sum([sum(score) for score in scores]) / sum([len(score) for score in scores])
     print(f'{name}\t{str(avg).replace(".", ",")}')
     return avg

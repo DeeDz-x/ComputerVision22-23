@@ -8,29 +8,34 @@ from cv.utils.BoundingBox import BoundingBox as Box
 from cv.utils.video import videoToFrames
 
 
-def loadFrames(directory: str, getVideo: bool, *, getName: bool = False) -> \
-    tuple | list[list[ndarray] | cv.VideoCapture | list[Box]]:
+def loadFrames(directory: str, getVideo: bool, count=2, *, getName: bool = False) -> \
+    tuple | list[list[ndarray] | cv.VideoCapture | list[Box] | dict[str, str]]:
     """ Loads a video from a directory and returns it as a list of frames or the video itself
 
     :param directory: The directory of the folder
     :param getVideo: If True, the function will return a cv.VideoCapture object instead of a list of frames
+    :param count: The number of folder to load
     :param getName: If True, the function will return a tuple of the name and the frames or video
     :return: Returns a list of [type[frames | video]]
     """
-    retList: list = [[], []]
+    retList: list = [[] for _ in range(count)]
     names = []
     for i, folder in enumerate(os.listdir(directory)):
-        for file in os.listdir(directory + folder):
-            if file.endswith('.txt'):  # handle bounding boxes file
-                retList[i] = loadBoxes(directory + folder + '\\')
-            if file.endswith('.avi'):
-                names.append(file)
-                cap = cv.VideoCapture(directory + folder + '\\' + file)
-                if getVideo:
-                    retList[i] = cap
-                else:
-                    retList[i].extend(videoToFrames(cap, []))
-                break
+        if folder.endswith('.ini'):  # not a folder but seq_info
+            retList[i] = loadIni(directory + folder)
+        else:
+            for file in os.listdir(directory + folder):
+                if file.endswith('.txt'):  # handle bounding boxes file
+                    retList[i] = loadBoxes(directory + folder + '\\')
+                    break
+                if file.endswith('.avi'):
+                    names.append(file)
+                    cap = cv.VideoCapture(directory + folder + '\\' + file)
+                    if getVideo:
+                        retList[i] = cap
+                    else:
+                        retList[i].extend(videoToFrames(cap, []))
+                    break
     if getName:
         return names, retList
     return retList
@@ -63,7 +68,7 @@ def loadBoxes(path, *, debugPrint=False) -> list[Box]:
     File format:
     One line per bounding box
     Line:
-    <frame>,<id>,<bb_left>,<bb_top>,<bb_width>,<bb_height>
+    <frame>,<id>,<bb_left>,<bb_top>,<bb_width>,<bb_height>,(<confidence>,<class>,<visibility>)
 
     :param debugPrint: If True, the function will print debug messages
     :param path: The path to the bounding boxes file
@@ -82,8 +87,18 @@ def loadBoxes(path, *, debugPrint=False) -> list[Box]:
             if debugPrint:
                 print(f'Lines Count: {len(lines)}')
             for line in lines:
-                frame, box_id, bb_left, bb_top, bb_width, bb_height = line.split(',')
-                boxes.append(Box(int(frame), int(box_id), int(bb_left), int(bb_top), int(bb_width), int(bb_height)))
+                data = line.split(',')
+                if len(data) == 10:
+                    frame, box_id, x, y, w, h, conf, x, y, z = data  # ignoring x,y,z
+                    boxes.append(Box(int(frame), int(box_id), float(x), float(y), float(w), float(h), float(conf)))
+                elif len(data) == 9:
+                    frame, box_id, x, y, w, h, conf, box_class, vis = data
+                    boxes.append(Box(int(frame), int(box_id), float(x), float(y), float(w), float(h), float(conf),
+                                     int(box_class), float(vis)))
+                elif len(data) == 6:
+                    frame, box_id, x, y, w, h = data
+                    boxes.append(Box(int(frame), int(box_id), float(x), float(y), float(w), float(h)))
+
     return boxes
 
 
@@ -108,6 +123,41 @@ def loadFolderMileStone3(directory: str, getVideo: bool = True, *, printInfo: bo
         print(f'Loaded {len(names)} videos: [{", ".join(names[:5])}{", ...]" if len(names) > 5 else "]"}')
         print()
     return ret
+
+
+def loadFolderMileStone4(directory: str, getVideo: bool = True, *, printInfo: bool = False) -> list[
+    list[list[ndarray] | cv.VideoCapture | list[Box]]]:
+    """ Loads all frames from a milestone 4 folder and returns them in a list
+
+        :param directory: The directory of the milestone folder
+        :param getVideo: If True, the function will return a list of cv.VideoCapture objects instead of lists of frames
+        :param printInfo: If True, the function will print a small message with max 5 names of found videos
+        :return: Returns a list of [videos[type[frames | video | boxes]]]
+    """
+    ret = [[] for _ in range(len(list(filter(lambda x: os.path.isdir(directory + x), os.listdir(directory)))))]
+    names = []
+    for i, folder in enumerate(os.listdir(directory)):
+        if not os.path.isdir(directory + folder):
+            continue
+        retNames, ret[i] = loadFrames(directory + folder + '\\', getVideo, 4, getName=True)
+        names.extend(retNames)
+    if printInfo:
+        # print small message with max 5 names
+        print(f'Loaded {len(names)} videos: [{", ".join(names[:5])}{", ...]" if len(names) > 5 else "]"}')
+        print()
+    return ret
+
+
+def loadIni(path: str) -> dict[str, str]:
+    """ Loads an ini file and returns it as a dictionary
+
+    :param path: The path to the ini file
+    :return: Returns a dictionary of the ini file
+    """
+    import configparser
+    config = configparser.ConfigParser()
+    config.read(path)
+    return dict(config['Sequence'])
 
 
 def createOutFolder(name: str, *, printInfo: bool = False) -> str:

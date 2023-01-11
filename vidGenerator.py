@@ -35,12 +35,22 @@ def main():
 
 if __name__ == '__main__':
     print('Do not run this file directly! Use: ffmpeg -i <inputfiles> -an -c ffv1 output.avi')
+    print('Should I run it for you? (y/n)')
+    if input() == 'y':
+        milestone = input('Which milestone? (1/4)\n')
+        # starts genVideos.bat in folder 'IMAGES_PATH+data_ms<milestone>'
+        os.system(f'cd {IMAGES_PATH}data_ms{milestone} && genVideos.bat')
+    else:
+        print('Aborting...')
+    exit()
     #main() # This is for the old generation
 
     # This code below is just to verify the new video generation. It print all unique frames
+    """
     vid = cv.VideoCapture('images/data_ms2/2/gt/output.avi')
     vid.set(cv.CAP_PROP_POS_FRAMES, 500)
     ret, frame = vid.read()
 
     # prints set of frames
     print(np.unique(frame))
+    """

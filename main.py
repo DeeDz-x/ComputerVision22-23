@@ -19,6 +19,7 @@ def detect():
     video_inputs = [vid[2] for vid in videos]
     seq_infos = [vid[3] for vid in videos]
 
+    own_dects = dects
     for i, video in enumerate(video_inputs):
         gt_boxes = gts[i]
         gt_dict = prepareBBs(gt_boxes)
@@ -48,6 +49,10 @@ def detect():
                 if not playImageAsVideo(frame, int(seq_info['framerate'])):
                     break
         print(f'Video {i + 1} done')
+        # eval
+        own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
+        gts = [[box.toDetectionString() for box in boxes] for boxes in gts]
+        evalMOTA(own_dects, gts)
 
 
 def prepareBBs(bbs):
@@ -91,6 +96,7 @@ def main(argv):
                 print('No detections found')
                 return
             gts = [vid[1] for vid in videos]
+            gts = [[box.toDetectionString() for box in boxes] for boxes in gts]
 
             evalMOTA(dects, gts)
         else:

@@ -33,7 +33,8 @@ class BoundingBox:
         return ret_str
 
     def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 1.0,
-                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False, verbose: bool = True) -> list[ndarray]:
+                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False,
+                      verbose: bool = True) -> list[ndarray]:
         """ Adds the box to the image with confidence and box_id as text
 
         :param copy: If True, the function will return a copy of the image with the box drawn on it
@@ -69,7 +70,8 @@ class BoundingBox:
             font_scale = 0.5
             line_type = 1
             text_width, text_height = getTextSize(text, font, font_scale, line_type)[0]
-            addWeighted(rectangle(img.copy(), (right - text_width, bottom), (right, bottom - text_height), color, -1), alpha,
+            addWeighted(rectangle(img.copy(), (right - text_width, bottom), (right, bottom - text_height), color, -1),
+                        alpha,
                         img, 1 - alpha, 0, img)
             putText(img, text, (right - text_width, bottom - 2), font, font_scale, font_color, line_type)
 
@@ -110,3 +112,23 @@ class BoundingBox:
         union = box1.area + box2.area - intersection
 
         return intersection / union
+
+    def toDetectionString(self):
+        """
+        Format:
+        <frame>,<id>,<left>,<top>,<width>,<height>,<confidence>,<class>,<visibility>
+
+        :return: Returns the bounding box as a detection string
+        """
+
+        ret_string = f'{self.frame},{self.box_id},{self.left},{self.top},{self.width},{self.height}'
+        if self.confidence is not None:
+            ret_string += f',{self.confidence}'
+
+        if self.class_id is not None:
+            ret_string += f',{self.class_id}'
+
+        if self.visibility is not None:
+            ret_string += f',{self.visibility}'
+
+        return ret_string

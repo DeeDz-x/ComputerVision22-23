@@ -22,13 +22,14 @@ def detect():
 
     own_dects = np.array(dects, dtype=object)
     # filter only keep dects if conf > t
-    t = 0.4
+    t = 0.0
     own_dects = [list(filter(lambda x: x.confidence > t, dect)) for dect in own_dects]
     for i, video in enumerate(video_inputs):
         gt_boxes = gts[i]
         gt_dict = prepareBBs(gt_boxes)
-        det_boxes = dects[i]
+        det_boxes = own_dects[i]
         det_dict = prepareBBs(det_boxes)
+        seq_info = seq_infos[i]
 
         counter = 0
         while True:
@@ -47,8 +48,6 @@ def detect():
                 for box in det_boxes_in_frame:
                     # draw box
                     box.addBoxToImage(frame, (0, 0, 255), alpha=1., verbose=False)
-
-                seq_info = seq_infos[i]
 
                 if not playImageAsVideo(frame, int(seq_info['framerate'])):
                     break

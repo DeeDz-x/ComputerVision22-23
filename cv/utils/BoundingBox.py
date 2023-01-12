@@ -33,7 +33,7 @@ class BoundingBox:
         return ret_str
 
     def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 1.0,
-                      thickness: int = 2, copy: bool = False) -> list[ndarray]:
+                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False, verbose: bool = True) -> list[ndarray]:
         """ Adds the box to the image with confidence and box_id as text
 
         :param copy: If True, the function will return a copy of the image with the box drawn on it
@@ -41,20 +41,21 @@ class BoundingBox:
         :param color: The color of the box
         :param alpha: The transparency of the box
         :param thickness: The thickness of the box
+        :param font_color: The color of the text on the box
+        :param verbose: If True, the function will print warning if any value is not an integer
         :return: Returns the same image with the box drawn on it (or a copy of it)
         """
         if copy:
             img = img.copy()
 
         # rounds all values to integers and prints warning if any value is not an integer
-        left, top, right, bottom = self.__roundValues()
+        left, top, right, bottom = self.__roundValues(verbose)
 
         # draws confidence on top left corner of box outside
         if self.confidence is not None:
             text = f'{self.confidence:.2f}'
             font = FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
-            font_color = (0, 0, 0)
             line_type = 1
             text_width, text_height = getTextSize(text, font, font_scale, line_type)[0]
             addWeighted(rectangle(img.copy(), (left, top), (left + text_width, top - text_height), color, -1), alpha,
@@ -66,7 +67,6 @@ class BoundingBox:
             text = f'{self.box_id}'
             font = FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
-            font_color = (0, 0, 0)
             line_type = 1
             text_width, text_height = getTextSize(text, font, font_scale, line_type)[0]
             addWeighted(rectangle(img.copy(), (right - text_width, bottom), (right, bottom - text_height), color, -1), alpha,
@@ -78,15 +78,16 @@ class BoundingBox:
 
         return img
 
-    def __roundValues(self):
+    def __roundValues(self, verbose: bool = True):
         """ Rounds all values to integers and prints warning if any value is not an integer """
         left = round(self.left)
         top = round(self.top)
         right = round(self.right)
         bottom = round(self.bottom)
 
-        if self.left != left or self.top != top or self.right != right or self.bottom != bottom:
-            print('Warning: BoundingBox values are not integers')
+        if verbose:
+            if self.left != left or self.top != top or self.right != right or self.bottom != bottom:
+                print('Warning: BoundingBox values are not integers')
 
         return left, top, right, bottom
 

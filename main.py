@@ -1,6 +1,5 @@
 import os
 
-from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
 
@@ -18,15 +17,9 @@ def detect():
 
     for i, video in enumerate(video_inputs):
         gt_boxes = gts[i]
-        # filters to keep only class 1 and None
-        sortedGt = list(filter(lambda x: x.class_id in [1, None], gt_boxes))
-        # to speed up the search, we create a dictionary with the frame as key and the boxes as value
-        gt_dict = {}
-        for box in sortedGt:
-            if box.frame in gt_dict:
-                gt_dict[box.frame].append(box)
-            else:
-                gt_dict[box.frame] = [box]
+        gt_dict = prepareBBs(gt_boxes)
+        det_boxes = dects[i]
+        det_dict = prepareBBs(det_boxes)
 
         counter = 0
         while True:
@@ -39,12 +32,31 @@ def detect():
             gt_boxes_in_frame = gt_dict[counter]
             for box in gt_boxes_in_frame:
                 # draw box
-                box.addBoxToImage(frame, (255, 255, 0), alpha=0.2)
+                box.addBoxToImage(frame, (255, 255, 0), alpha=0.2, verbose=False)
+
+            # every det box in frame
+            det_boxes_in_frame = det_dict[counter]
+            for box in det_boxes_in_frame:
+                # draw box
+                box.addBoxToImage(frame, (0, 0, 255), alpha=1., verbose=False)
 
             seq_info = seq_infos[i]
 
             if not playImageAsVideo(frame, int(seq_info['framerate'])):
                 break
+
+
+def prepareBBs(bbs):
+    # filters to keep only class 1 and None
+    sortedBbs = list(filter(lambda x: x.class_id in [1, None], bbs))
+    # to speed up the search, we create a dictionary with the frame as key and the boxes as value
+    ret_dict = {}
+    for box in sortedBbs:
+        if box.frame in ret_dict:
+            ret_dict[box.frame].append(box)
+        else:
+            ret_dict[box.frame] = [box]
+    return ret_dict
 
 
 def main():

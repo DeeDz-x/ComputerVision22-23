@@ -34,7 +34,7 @@ class BoundingBox:
 
     def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 1.0,
                       thickness: int = 2, copy: bool = False) -> list[ndarray]:
-        """ Adds the box to the image
+        """ Adds the box to the image with confidence and box_id as text
 
         :param copy: If True, the function will return a copy of the image with the box drawn on it
         :param img: The image to add the box to

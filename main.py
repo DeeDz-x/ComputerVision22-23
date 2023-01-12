@@ -19,8 +19,16 @@ def detect():
     for i, video in enumerate(video_inputs):
         counter = 0
         gt_boxes = gts[i]
-        sortedGt = list(filter(lambda x: x.class_id == 1, gt_boxes))
-        sortedGt = sorted(sortedGt, key=lambda x: x.frame)
+        # filters to keep only class 1 and None
+        sortedGt = list(filter(lambda x: x.class_id in [1, None], gt_boxes))
+        # to speed up the search, we create a dictionary with the frame as key and the boxes as value
+        gt_dict = {}
+        for box in sortedGt:
+            if box.frame in gt_dict:
+                gt_dict[box.frame].append(box)
+            else:
+                gt_dict[box.frame] = [box]
+
         while True:
             ret, frame = video.read()
             counter += 1
@@ -28,7 +36,7 @@ def detect():
                 break
 
             # every gt box in frame
-            gt_boxes_in_frame = [box for box in sortedGt if box.frame == counter]
+            gt_boxes_in_frame = gt_dict[counter]
             for box in gt_boxes_in_frame:
                 # draw box
                 box.addBoxToImage(frame, (255, 255, 0), alpha=0.2)
@@ -37,6 +45,7 @@ def detect():
 
             if not playImageAsVideo(frame, int(seq_info['framerate'])):
                 break
+
 
 
 def main():

@@ -20,7 +20,10 @@ def detect():
     video_inputs = [vid[2] for vid in videos]
     seq_infos = [vid[3] for vid in videos]
 
-    own_dects = dects
+    own_dects = np.array(dects, dtype=object)
+    # filter only keep dects if conf > t
+    t = 0.4
+    own_dects = [list(filter(lambda x: x.confidence > t, dect)) for dect in own_dects]
     for i, video in enumerate(video_inputs):
         gt_boxes = gts[i]
         gt_dict = prepareBBs(gt_boxes)
@@ -52,6 +55,7 @@ def detect():
         print(f'Video {i + 1} done')
 
     # eval
+    print(f'Evaluating...')
     own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
     gts = [[box.toDetectionString() for box in boxes] for boxes in gts]
     evalMOTA(own_dects, gts)

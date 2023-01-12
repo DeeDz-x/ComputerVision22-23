@@ -17,7 +17,6 @@ def detect():
     seq_infos = [vid[3] for vid in videos]
 
     for i, video in enumerate(video_inputs):
-        counter = 0
         gt_boxes = gts[i]
         # filters to keep only class 1 and None
         sortedGt = list(filter(lambda x: x.class_id in [1, None], gt_boxes))
@@ -29,6 +28,7 @@ def detect():
             else:
                 gt_dict[box.frame] = [box]
 
+        counter = 0
         while True:
             ret, frame = video.read()
             counter += 1
@@ -45,7 +45,6 @@ def detect():
 
             if not playImageAsVideo(frame, int(seq_info['framerate'])):
                 break
-
 
 
 def main():

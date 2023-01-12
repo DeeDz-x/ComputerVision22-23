@@ -89,7 +89,7 @@ def loadBoxes(path, *, debugPrint=False) -> list[Box]:
             for line in lines:
                 data = line.split(',')
                 if len(data) == 10:
-                    frame, box_id, x, y, w, h, conf, x, y, z = data  # ignoring x,y,z
+                    frame, box_id, x, y, w, h, conf, _x, _y, _z = data  # ignoring x,y,z
                     boxes.append(Box(int(frame), int(box_id), float(x), float(y), float(w), float(h), float(conf)))
                 elif len(data) == 9:
                     frame, box_id, x, y, w, h, conf, box_class, vis = data

@@ -1,3 +1,6 @@
+from typing import Tuple, List, Any
+
+import numpy as np
 from cv2 import rectangle, addWeighted, putText, FONT_HERSHEY_SIMPLEX, getTextSize
 from numpy import ndarray
 
@@ -33,8 +36,8 @@ class BoundingBox:
         return ret_str
 
     def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 1.0,
-                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False,
-                      verbose: bool = True) -> list[ndarray]:
+                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False, getOverlay: bool = False,
+                      overrideOverlay = None, verbose: bool = True) -> list[ndarray]:
         """ Adds the box to the image with confidence and box_id as text
 
         :param copy: If True, the function will return a copy of the image with the box drawn on it
@@ -43,6 +46,8 @@ class BoundingBox:
         :param alpha: The transparency of the box
         :param thickness: The thickness of the box
         :param font_color: The color of the text on the box
+        :param getOverlay: If True, the function will return the overlay instead of the image with the overlay added
+        :param overrideOverlay: If not None, the function will use this as the overlay instead of creating a new one
         :param verbose: If True, the function will print warning if any value is not an integer
         :return: Returns the same image with the box drawn on it (or a copy of it)
         """
@@ -52,6 +57,8 @@ class BoundingBox:
         # rounds all values to integers and prints warning if any value is not an integer
         left, top, right, bottom = self.__roundValues(verbose)
 
+        overlay = overrideOverlay if overrideOverlay is not None else img.copy()
+
         # draws confidence on top left corner of box outside
         if self.confidence is not None:
             text = f'{self.confidence:.2f}'
@@ -59,9 +66,8 @@ class BoundingBox:
             font_scale = 0.5
             line_type = 1
             text_width, text_height = getTextSize(text, font, font_scale, line_type)[0]
-            addWeighted(rectangle(img.copy(), (left, top), (left + text_width, top - text_height), color, -1), alpha,
-                        img, 1 - alpha, 0, img)
-            putText(img, text, (left, top - 2), font, font_scale, font_color, line_type)
+            overlay = rectangle(overlay, (left, top), (left + text_width, top + text_height), color, -1)
+            overlay = putText(overlay, text, (left, top + text_height), font, font_scale, font_color, line_type)
 
         # draws id to bottom right corner of box inside of the box
         if self.box_id is not None:
@@ -70,13 +76,17 @@ class BoundingBox:
             font_scale = 0.5
             line_type = 1
             text_width, text_height = getTextSize(text, font, font_scale, line_type)[0]
-            addWeighted(rectangle(img.copy(), (right - text_width, bottom), (right, bottom - text_height), color, -1),
-                        alpha,
-                        img, 1 - alpha, 0, img)
-            putText(img, text, (right - text_width, bottom - 2), font, font_scale, font_color, line_type)
+            overlay = rectangle(overlay, (right - text_width, bottom - text_height), (right, bottom), color, -1)
+            overlay = putText(overlay, text, (right - text_width, bottom), font, font_scale, font_color, line_type)
 
-        addWeighted(rectangle(img.copy(), (left, top), (right, bottom), color, thickness),
-                    alpha, img, 1 - alpha, 0, img)
+        # draws box
+        overlay = rectangle(overlay, (left, top), (right, bottom), color, thickness)
+
+        if getOverlay:
+            return overlay
+
+        # adds overlay to image
+        addWeighted(img, 1 - alpha, overlay, alpha, 0, img)
 
         return img
 

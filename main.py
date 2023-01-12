@@ -1,6 +1,7 @@
 import os
 import sys
 
+import cv2 as cv
 import motmetrics as mm
 import numpy as np
 
@@ -8,7 +9,8 @@ from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
-DISPLAY = False
+DISPLAY = True  # displays the image and waits for a key press
+HIDE_GT = False  # if true, the ground truth is not shown, if display is true
 
 
 def detect():
@@ -29,7 +31,12 @@ def detect():
         gt_dict = prepareBBs(gt_boxes)
         det_boxes = own_dects[i]
         det_dict = prepareBBs(det_boxes)
+
+        # video info
         seq_info = seq_infos[i]
+        fps = int(seq_info['framerate'])
+        vid_name = seq_info['name']
+        frame_count = int(seq_info['seqlength'])
 
         counter = 0
         while True:
@@ -38,19 +45,37 @@ def detect():
             if not ret:
                 break
 
+
+
             gt_boxes_in_frame = gt_dict[counter]
             det_boxes_in_frame = det_dict[counter]
             if DISPLAY:
+
+                overlay = None
+                new_frame = frame.copy()
+                # overlay for all gt_boxes (with alpha)
+                alpha = 0.3
                 for box in gt_boxes_in_frame:
-                    # draw box
-                    box.addBoxToImage(frame, (255, 255, 0), alpha=0.2, verbose=False)
+                    overlay = box.addBoxToImage(new_frame, (255, 255, 0), verbose=False, getOverlay=True,
+                                                overrideOverlay=overlay)
 
+                if overlay is not None:  # apply all gt_boxes (overlay) on frame
+                    if not HIDE_GT:
+                        cv.addWeighted(overlay, alpha, new_frame, 1 - alpha, 0, new_frame)
+                    overlay = None
+
+                # overlay for all det_boxes (without alpha)
                 for box in det_boxes_in_frame:
-                    # draw box
-                    box.addBoxToImage(frame, (0, 0, 255), alpha=1., verbose=False)
+                    overlay = box.addBoxToImage(new_frame, (255, 0, 255), verbose=False, getOverlay=True,
+                                                overrideOverlay=overlay)
 
-                if not playImageAsVideo(frame, int(seq_info['framerate'])):
+                if overlay is not None:
+                    new_frame = overlay  # override frame with overlay, since we have no alpha for det_boxes
+
+                if not playImageAsVideo(new_frame, fps, f'{vid_name} | {frame_count} frames'):
+                    cv.destroyAllWindows()
                     break
+
         print(f'Video {i + 1} done')
 
     # eval

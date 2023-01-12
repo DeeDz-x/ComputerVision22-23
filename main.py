@@ -2,6 +2,7 @@ import os
 import sys
 
 import motmetrics as mm
+import numpy as np
 
 from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
@@ -49,10 +50,11 @@ def detect():
                 if not playImageAsVideo(frame, int(seq_info['framerate'])):
                     break
         print(f'Video {i + 1} done')
-        # eval
-        own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
-        gts = [[box.toDetectionString() for box in boxes] for boxes in gts]
-        evalMOTA(own_dects, gts)
+
+    # eval
+    own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
+    gts = [[box.toDetectionString() for box in boxes] for boxes in gts]
+    evalMOTA(own_dects, gts)
 
 
 def prepareBBs(bbs):
@@ -72,9 +74,16 @@ def evalMOTA(all_dects, all_gts):
     accs = []
     for i, dect in enumerate(all_dects):
         gts = all_gts[i]
+        gts = np.array([gt.split(',') for gt in gts])[:, :6]
+        gts = gts.astype(float)
+        dect = np.array([dect.split(',') for dect in dect])[:, :6]
+        dect = dect.astype(float)
         acc = mm.MOTAccumulator(auto_id=True)
-        C = mm.distances.iou_matrix(dect, gts, max_iou=0.5)
-        acc.update(gts, dect, C)
+        for frame in range(int(gts[:, 0].max())):
+            gt = gts[gts[:, 0] == frame]
+            det = dect[dect[:, 0] == frame]
+            C = mm.distances.iou_matrix(gt[:, 2:], det[:, 2:], max_iou=0.5)
+            acc.update(gt[:, 1].astype(int), det[:, 1].astype(int), C)
         accs.append(acc)
     mh = mm.metrics.create()
     names = [f'Video {i + 1}' for i in range(len(all_dects))]
@@ -82,7 +91,13 @@ def evalMOTA(all_dects, all_gts):
                               metrics=mm.metrics.motchallenge_metrics,
                               names=names,
                               generate_overall=True)
-    print(summary)
+
+    strsummary = mm.io.render_summary(
+        summary,
+        formatters=mh.formatters,
+        namemap=mm.io.motchallenge_metric_names
+    )
+    print(strsummary)
 
 
 def main(argv):

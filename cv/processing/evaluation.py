@@ -1,4 +1,5 @@
 import cv2 as cv
+import motmetrics as mm
 import numpy as np
 
 import cv.processing.bgsubtraction as bgsub
@@ -74,3 +75,31 @@ if __name__ == '__main__':
 # rp -> 255-254 = 1
 # fp -> 0-254 = -254
 # fn -> 255-1 = 254
+def evalMOTA(all_dects, all_gts):
+    accs = []
+    for i, dect in enumerate(all_dects):
+        gts = all_gts[i]
+        gts = np.array([gt.split(',') for gt in gts])[:, :6]
+        gts = gts.astype(float)
+        dect = np.array([dect.split(',') for dect in dect])[:, :6]
+        dect = dect.astype(float)
+        acc = mm.MOTAccumulator(auto_id=True)
+        for frame in range(int(gts[:, 0].max())):
+            gt = gts[gts[:, 0] == frame]
+            det = dect[dect[:, 0] == frame]
+            C = mm.distances.iou_matrix(gt[:, 2:], det[:, 2:], max_iou=0.5)
+            acc.update(gt[:, 1].astype(int), det[:, 1].astype(int), C)
+        accs.append(acc)
+    mh = mm.metrics.create()
+    names = [f'Video {i + 1}' for i in range(len(all_dects))]
+    summary = mh.compute_many(accs,
+                              metrics=mm.metrics.motchallenge_metrics,
+                              names=names,
+                              generate_overall=True)
+
+    strsummary = mm.io.render_summary(
+        summary,
+        formatters=mh.formatters,
+        namemap=mm.io.motchallenge_metric_names
+    )
+    print(strsummary)

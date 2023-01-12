@@ -2,14 +2,15 @@ import os
 import sys
 
 import cv2 as cv
-import motmetrics as mm
 import numpy as np
 
+from cv.features.detections import confidenceFilter
+from cv.processing.evaluation import evalMOTA
 from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
-DISPLAY = True  # displays the image and waits for a key press
+DISPLAY = False  # displays the image and waits for a key press
 HIDE_GT = False  # if true, the ground truth is not shown, if display is true
 
 
@@ -22,11 +23,12 @@ def detect():
     video_inputs = [vid[2] for vid in videos]
     seq_infos = [vid[3] for vid in videos]
 
-    own_dects = np.array(dects, dtype=object)
-    # filter only keep dects if conf > t
-    t = 0.0
-    own_dects = [list(filter(lambda x: x.confidence > t, dect)) for dect in own_dects]
-    for i, video in enumerate(video_inputs):
+    own_dects = np.array(dects, dtype=object)  # copy of the detections to be modified. Numpy to speed up and multi-dim
+
+    own_dects = confidenceFilter(0.0, own_dects)
+
+    for i, video in enumerate(video_inputs):  # for each video
+        # prepare bb's as dicts
         gt_boxes = gts[i]
         gt_dict = prepareBBs(gt_boxes)
         det_boxes = own_dects[i]
@@ -38,19 +40,17 @@ def detect():
         vid_name = seq_info['name']
         frame_count = int(seq_info['seqlength'])
 
-        counter = 0
+        counter = 0  # frame counter
         while True:
             ret, frame = video.read()
             counter += 1
             if not ret:
                 break
 
-
-
             gt_boxes_in_frame = gt_dict[counter]
             det_boxes_in_frame = det_dict[counter]
-            if DISPLAY:
 
+            if DISPLAY:
                 overlay = None
                 new_frame = frame.copy()
                 # overlay for all gt_boxes (with alpha)
@@ -96,36 +96,6 @@ def prepareBBs(bbs):
         else:
             ret_dict[box.frame] = [box]
     return ret_dict
-
-
-def evalMOTA(all_dects, all_gts):
-    accs = []
-    for i, dect in enumerate(all_dects):
-        gts = all_gts[i]
-        gts = np.array([gt.split(',') for gt in gts])[:, :6]
-        gts = gts.astype(float)
-        dect = np.array([dect.split(',') for dect in dect])[:, :6]
-        dect = dect.astype(float)
-        acc = mm.MOTAccumulator(auto_id=True)
-        for frame in range(int(gts[:, 0].max())):
-            gt = gts[gts[:, 0] == frame]
-            det = dect[dect[:, 0] == frame]
-            C = mm.distances.iou_matrix(gt[:, 2:], det[:, 2:], max_iou=0.5)
-            acc.update(gt[:, 1].astype(int), det[:, 1].astype(int), C)
-        accs.append(acc)
-    mh = mm.metrics.create()
-    names = [f'Video {i + 1}' for i in range(len(all_dects))]
-    summary = mh.compute_many(accs,
-                              metrics=mm.metrics.motchallenge_metrics,
-                              names=names,
-                              generate_overall=True)
-
-    strsummary = mm.io.render_summary(
-        summary,
-        formatters=mh.formatters,
-        namemap=mm.io.motchallenge_metric_names
-    )
-    print(strsummary)
 
 
 def main(argv):

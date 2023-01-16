@@ -1,6 +1,5 @@
-from typing import Tuple, List, Any
+from math import sqrt
 
-import numpy as np
 from cv2 import rectangle, addWeighted, putText, FONT_HERSHEY_SIMPLEX, getTextSize
 from numpy import ndarray
 
@@ -36,8 +35,9 @@ class BoundingBox:
         return ret_str
 
     def addBoxToImage(self, img: list[ndarray], color: tuple[int, int, int] = (0, 255, 0), alpha: float = 1.0,
-                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False, getOverlay: bool = False,
-                      overrideOverlay = None, verbose: bool = True) -> list[ndarray]:
+                      thickness: int = 2, font_color: tuple[int, int, int] = (0, 0, 0), copy: bool = False,
+                      getOverlay: bool = False,
+                      overrideOverlay=None, verbose: bool = True) -> list[ndarray]:
         """ Adds the box to the image with confidence and box_id as text
 
         :param copy: If True, the function will return a copy of the image with the box drawn on it
@@ -142,3 +142,11 @@ class BoundingBox:
             ret_string += f',{self.visibility}'
 
         return ret_string
+
+    def distance(self, other: 'BoundingBox') -> float:
+        """ Calculates the distance between two bounding boxes
+
+        :param other: The other bounding box
+        :return: Returns the distance between the two bounding boxes
+        """
+        return sqrt((self.center_x - other.center_x) ** 2 + (self.center_y - other.center_y) ** 2)

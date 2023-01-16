@@ -8,10 +8,12 @@ from cv.features.detections import confidenceFilter
 from cv.processing.evaluation import evalMOTA
 from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
+from cv.features.tracking import getHisto
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
 DISPLAY = False  # displays the image and waits for a key press
 HIDE_GT = False  # if true, the ground truth is not shown, if display is true
+HIDE_DET = False  # if true, the detection is not shown, if display is true
 
 
 def detect():
@@ -40,21 +42,59 @@ def detect():
         vid_name = seq_info['name']
         frame_count = int(seq_info['seqlength'])
 
-        counter = 0  # frame counter
+        frame_counter = 0
+        highestBoxId = 0
+        history_size = 10
+        history = {} # key == id; value == list of last 10 histograms
         while True:
             ret, frame = video.read()
-            counter += 1
+            frame_counter += 1
             if not ret:
                 break
 
-            gt_boxes_in_frame = gt_dict[counter]
-            det_boxes_in_frame = det_dict[counter]
+            gt_boxes_in_frame = gt_dict[frame_counter]
+            det_boxes_in_frame = det_dict[frame_counter]
+            if frame_counter == 1:
+                for det_i, box in enumerate(det_boxes_in_frame):
+                    box.box_id = det_i + 1
+                    highestBoxId = det_i + 1
+            else:
+                # finds the best match for each detection
+                prev_det_boxes_in_frame = det_dict[frame_counter - 1]
+                # shortest distance
+                for det_box in det_boxes_in_frame:
+                    min_dist = sys.maxsize
+                    min_box = None
+                    for prev_det_box in prev_det_boxes_in_frame:
+                        dist = det_box.distance(prev_det_box)
+                        if dist < min_dist:
+                            min_dist = dist
+                            min_box = prev_det_box
+                    if min_box is None:
+                        raise Exception('No box found')
+                    # checks if id is already taken, by checking if id is in the current frame or distance is too high
+                    if min_box.box_id in [box.box_id for box in det_boxes_in_frame] or min_dist > 100:
+
+                        histo = getHisto(
+                            frame[min_box.y:min_box.y + min_box.h, min_box.x:min_box.x + min_box.w]
+                        )
+
+                        # check if id is in history
+                        if min_box.box_id in history:
+                            pass
+
+
+                        # if taken, create new id
+                        highestBoxId += 1
+                        det_box.box_id = highestBoxId
+                    else:
+                        det_box.box_id = min_box.box_id
 
             if DISPLAY:
                 overlay = None
                 new_frame = frame.copy()
                 # overlay for all gt_boxes (with alpha)
-                alpha = 0.3
+                alpha = 0.4
                 for box in gt_boxes_in_frame:
                     overlay = box.addBoxToImage(new_frame, (255, 255, 0), verbose=False, getOverlay=True,
                                                 overrideOverlay=overlay)
@@ -66,12 +106,14 @@ def detect():
 
                 # overlay for all det_boxes (without alpha)
                 for box in det_boxes_in_frame:
-                    overlay = box.addBoxToImage(new_frame, (255, 0, 255), verbose=False, getOverlay=True,
-                                                overrideOverlay=overlay)
+                    if not HIDE_DET:
+                        overlay = box.addBoxToImage(new_frame, (255, 0, 255), verbose=False, getOverlay=True,
+                                                    overrideOverlay=overlay)
 
                 if overlay is not None:
                     new_frame = overlay  # override frame with overlay, since we have no alpha for det_boxes
 
+                cv.waitKey(0)
                 if not playImageAsVideo(new_frame, fps, f'{vid_name} | {frame_count} frames'):
                     cv.destroyAllWindows()
                     break

@@ -31,7 +31,7 @@ def opticalFlow(prevImg, frame_gray, points, flowSize=21, flowLevel=3):
 
 
 def failTracking(reason: str, scoresList, videoId: int, curIndex: int, gt_boxes: list[BoundingBox]):
-    # print(f'!!{reason}!!') //TODO: Enable after testing
+    print(f'!!{reason}!!')
     # add 0 for all remaining gt_boxes
     scoresList[videoId].extend([0 for _ in range(len(gt_boxes) - curIndex)])
 
@@ -55,9 +55,10 @@ def filterPoints(points: np.ndarray, n: int, radius: int = 10) -> np.ndarray:
     return np.array(filtered_points)
 
 
-def backProjection(histogram: np.ndarray, img: np.ndarray, bg: np.ndarray):
+def backProjection(histogram: np.ndarray, img: np.ndarray, bg: np.ndarray | None):
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-    hsv = cv.bitwise_and(hsv, hsv, mask=bg)
+    if bg is not None:
+        hsv = cv.bitwise_and(hsv, hsv, mask=bg)
     dst = cv.calcBackProject([hsv], [0, 1], histogram, [0, 180, 0, 256], 1)
     return dst
 

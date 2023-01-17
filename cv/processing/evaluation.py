@@ -106,4 +106,4 @@ def evalMOTA(all_dects, all_gts):
     )
 
     print(strsummary)
-    print(f'Average MOTA: {avg_MOTA:.2%}')
+    print(f'Average MOTA: {avg_MOTA:.2%} ({avg_MOTA})')

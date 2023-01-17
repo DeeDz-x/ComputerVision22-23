@@ -44,7 +44,7 @@ def detect():
 
         frame_counter = 0
         highestBoxId = 0
-        history_size = 10
+        history_size = 30
         history = {}  # key == id; value == list of last 'history_size' histograms
         while True:
             ret, frame = video.read()
@@ -142,7 +142,7 @@ def detect():
     # eval
     print(f'Evaluating...')
     own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
-    gts = [[box.toDetectionString() for box in boxes] for boxes in gts]
+    gts = [[box.toDetectionString() for box in boxes if box.class_id in [1, None]] for boxes in gts]
     evalMOTA(own_dects, gts)
 
 

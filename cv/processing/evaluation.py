@@ -95,11 +95,15 @@ def evalMOTA(all_dects, all_gts):
     summary = mh.compute_many(accs,
                               metrics=mm.metrics.motchallenge_metrics,
                               names=names,
-                              generate_overall=True)
+                              )
+
+    avg_MOTA = np.mean(summary["mota"].values)
 
     strsummary = mm.io.render_summary(
         summary,
         formatters=mh.formatters,
         namemap=mm.io.motchallenge_metric_names
     )
+
     print(strsummary)
+    print(f'Average MOTA: {avg_MOTA:.2%}')

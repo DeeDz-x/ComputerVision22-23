@@ -22,6 +22,12 @@ def getHisto(gt_img, mask=None, binSize=None):
     return roi_hist
 
 
+def getHistosFromImgWithBBs(img: np.ndarray, bbs: list[BoundingBox]):
+    histos = []
+    for bb in bbs:
+        histos.append(getHisto(img[round(bb.top):round(bb.bottom), round(bb.left):round(bb.right)]))
+    return histos
+
 def opticalFlow(prevImg, frame_gray, points, flowSize=21, flowLevel=3):
     p1, st, err = cv.calcOpticalFlowPyrLK(prevImg, frame_gray, points, None, None, None,
                                           (flowSize, flowSize), flowLevel,

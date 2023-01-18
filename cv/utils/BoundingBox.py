@@ -1,6 +1,6 @@
 from math import sqrt
 
-from cv2 import rectangle, addWeighted, putText, FONT_HERSHEY_SIMPLEX, getTextSize
+from cv2 import rectangle, addWeighted, putText, FONT_HERSHEY_SIMPLEX, getTextSize, compareHist, HISTCMP_CORREL
 from numpy import ndarray
 
 
@@ -150,3 +150,25 @@ class BoundingBox:
         :return: Returns the distance between the two bounding boxes
         """
         return sqrt((self.center_x - other.center_x) ** 2 + (self.center_y - other.center_y) ** 2)
+
+    def similarity(self, other: 'BoundingBox', my_histogram: list[ndarray],histograms: list[ndarray], weights: list[float]) -> float:
+        """ Calculates the similarity between two bounding boxes
+
+        :param other: The other bounding box
+        :param my_histogram: The histogram of this bounding box
+        :param histograms: The history of the histograms
+        :param weights: The weights of the histogram
+        :return: Returns the similarity between the two bounding boxes
+        """
+        distance = self.distance(other)
+        size_difference = abs(self.area - other.area)
+        iou = BoundingBox.intersectionOverUnion(self, other)
+        avg_histo_similarity = 0
+        for i in range(len(histograms)):
+            avg_histo_similarity += compareHist(my_histogram, histograms[i], HISTCMP_CORREL)
+        avg_histo_similarity /= len(histograms)
+
+        return weights[0] * distance \
+            + weights[1] * size_difference \
+            + weights[2] * (1 - iou) \
+            + weights[3] * (1 - avg_histo_similarity)

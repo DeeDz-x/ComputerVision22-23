@@ -177,4 +177,12 @@ class BoundingBox:
         return (weights[0] * distance
                 + weights[1] * size_difference
                 + weights[2] * (1 - iou)
-                + weights[3] * (1 - avg_histo_similarity)) / 4
+                + weights[3] * (1 - avg_histo_similarity)) / len(weights)
+
+    def overlaps(self, other_box):
+        """ Checks if a other box is completely inside this box
+
+        :param other_box: The other box
+        :return: Returns true if the other box is completely inside this box
+        """
+        return self.left <= other_box.left and self.top <= other_box.top and self.right >= other_box.right and self.bottom >= other_box.bottom

@@ -4,14 +4,14 @@ import cv2 as cv
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from cv.features.detections import confidenceFilter, iouFilter
+from cv.features.detections import confidenceFilter, iouFilter, overlapFilter
 from cv.features.tracking import getHistosFromImgWithBBs
 from cv.processing.evaluation import evalMOTA
 from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
-DISPLAY = False  # displays the image and waits for a key press
+DISPLAY = True  # displays the images as an video (space to pause, esc to exit)
 HIDE_GT = False  # if true, the ground truth is not shown, if display is true
 HIDE_DET = False  # if true, the detection is not shown, if display is true
 
@@ -29,17 +29,18 @@ def detect():
 
     own_dects = confidenceFilter(0, own_dects)
     own_dects = iouFilter(0.5, own_dects)
+    own_dects = overlapFilter(own_dects)
 
     # (distance, size, iou, histogram)
-    weights = np.array([0.9, 0.5, 0.3, 0.8])
+    weights = np.array([0.9, 0.5, 0.3, 0.6])
     history_size = 30  # number of histos to keep in history
-    score_threshold = .2  # threshold for the score to be considered a good enough match
-    MAX_AGE = 25
+    score_threshold = .2  # threshold for the score to be considered a good enough match (less is better)
+    MAX_AGE = 25  # max age of a 'lost' object before it is ignored
 
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        if video_ID != 0:
+        if video_ID != 3:
             print('skipping video', video_ID + 1)
             continue
 

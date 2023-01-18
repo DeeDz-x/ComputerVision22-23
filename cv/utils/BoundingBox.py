@@ -151,12 +151,14 @@ class BoundingBox:
         """
         return sqrt((self.center_x - other.center_x) ** 2 + (self.center_y - other.center_y) ** 2)
 
-    def similarity(self, other: 'BoundingBox', my_histogram: list[ndarray],histograms: list[ndarray], weights: list[float]) -> float:
+    def similarity(self, other: 'BoundingBox', my_histogram: list[ndarray], histograms: list[ndarray], img_shape: tuple,
+                   weights: list[float]) -> float:
         """ Calculates the similarity between two bounding boxes
 
         :param other: The other bounding box
         :param my_histogram: The histogram of this bounding box
         :param histograms: The history of the histograms
+        :param img_shape: The shape of the image/frame
         :param weights: The weights of the histogram
         :return: Returns the similarity between the two bounding boxes
         """
@@ -168,8 +170,11 @@ class BoundingBox:
             avg_histo_similarity += compareHist(my_histogram, histograms[i], HISTCMP_CORREL)
         avg_histo_similarity /= len(histograms)
 
-        # TODO: Normalize values, so that the weights become more important
-        return weights[0] * distance \
-            + weights[1] * size_difference \
-            + weights[2] * (1 - iou) \
-            + weights[3] * (1 - avg_histo_similarity)
+        # Normalizes the values
+        distance /= sqrt(img_shape[0] ** 2 + img_shape[1] ** 2)
+        size_difference /= img_shape[0] * img_shape[1]
+
+        return (weights[0] * distance
+                + weights[1] * size_difference
+                + weights[2] * (1 - iou)
+                + weights[3] * (1 - avg_histo_similarity)) / 4

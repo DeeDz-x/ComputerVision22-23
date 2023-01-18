@@ -28,7 +28,7 @@ def detect():
     own_dects = np.array(dects, dtype=object)  # copy of the detections to be modified. Numpy to speed up and multi-dim
 
     own_dects = confidenceFilter(0, own_dects)
-    own_dects = iouFilter(0.5, own_dects)
+    own_dects = iouFilter(0.3, own_dects)
     own_dects = overlapFilter(own_dects)
 
     # (distance, size, iou, histogram)
@@ -40,7 +40,7 @@ def detect():
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        #if video_ID != 3:
+        #if video_ID != 4:
         #    print('skipping video', video_ID + 1)
         #    continue
 

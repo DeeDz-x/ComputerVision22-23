@@ -11,7 +11,7 @@ from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
 
 IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '\\images\\'
-DISPLAY = True  # displays the images as an video (space to pause, esc to exit)
+DISPLAY = False  # displays the images as an video (space to pause, esc to exit)
 HIDE_GT = False  # if true, the ground truth is not shown, if display is true
 HIDE_DET = False  # if true, the detection is not shown, if display is true
 
@@ -32,7 +32,7 @@ def detect():
     own_dects = overlapFilter(own_dects)
 
     # (distance, size, iou, histogram)
-    weights = np.array([0.9, 0.5, 0.3, 0.6])
+    weights = np.array([0.8, 0.5, 0.3, 0.8])
     history_size = 30  # number of histos to keep in history
     score_threshold = .2  # threshold for the score to be considered a good enough match (less is better)
     MAX_AGE = 25  # max age of a 'lost' object before it is ignored
@@ -40,9 +40,9 @@ def detect():
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        if video_ID != 3:
-            print('skipping video', video_ID + 1)
-            continue
+        #if video_ID != 3:
+        #    print('skipping video', video_ID + 1)
+        #    continue
 
         # prepare bb's as dicts
         gt_boxes = gts[video_ID]
@@ -70,7 +70,7 @@ def detect():
             det_boxes_in_frame = det_dict[frame_counter]
 
             # calc histo for each box
-            histos_in_frame = getHistosFromImgWithBBs(frame, det_boxes_in_frame)
+            histos_in_frame = getHistosFromImgWithBBs(frame, det_boxes_in_frame, binSize=[32, 32])
 
             if frame_counter == 1:
                 # first frame; just id the boxes incrementally

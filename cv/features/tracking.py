@@ -17,15 +17,15 @@ def getHisto(gt_img, mask=None, binSize=None):
     if binSize is None:
         binSize = [180, 256]
     hsv = cv.cvtColor(gt_img, cv.COLOR_BGR2HSV)
-    roi_hist = cv.calcHist([hsv], [0, 1], mask, binSize, [0, 180, 0, 256])
+    roi_hist = cv.calcHist([hsv], [0, 1], mask, binSize, [0, 360, 0, 256])
     cv.normalize(roi_hist, roi_hist, 0, 255, cv.NORM_MINMAX)
     return roi_hist
 
 
-def getHistosFromImgWithBBs(img: np.ndarray, bbs: list[BoundingBox]):
+def getHistosFromImgWithBBs(img: np.ndarray, bbs: list[BoundingBox], mask=None, binSize=None):
     histos = []
     for bb in bbs:
-        histos.append(getHisto(img[round(bb.top):round(bb.bottom), round(bb.left):round(bb.right)]))
+        histos.append(getHisto(img[round(bb.top):round(bb.bottom), round(bb.left):round(bb.right)], mask, binSize))
     return histos
 
 def opticalFlow(prevImg, frame_gray, points, flowSize=21, flowLevel=3):

@@ -168,6 +168,7 @@ class BoundingBox:
             avg_histo_similarity += compareHist(my_histogram, histograms[i], HISTCMP_CORREL)
         avg_histo_similarity /= len(histograms)
 
+        # TODO: Normalize values, so that the weights become more important
         return weights[0] * distance \
             + weights[1] * size_difference \
             + weights[2] * (1 - iou) \

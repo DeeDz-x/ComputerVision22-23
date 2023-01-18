@@ -29,7 +29,8 @@ def detect():
 
     own_dects = confidenceFilter(0.0, own_dects)
 
-    weights = np.array([0.8, 0.7, 0.4, 0.3])
+    # (distance, size, iou, histogram)
+    weights = np.array([0.8, 0.5, 0.3, 0.6])
     history_size = 20  # number of histos to keep in history
     score_threshold = 5000  # threshold for the score to be considered a good enough match
 
@@ -37,7 +38,7 @@ def detect():
 
         # only video 1 for debugging
         if video_ID != 0:
-            print('skipping video', video_ID)
+            print('skipping video', video_ID+1)
             continue
 
 
@@ -74,8 +75,7 @@ def detect():
                 for box in det_boxes_in_frame:
                     box.box_id = next(highestBoxId)
             else:
-                # hungarian matching (distance, size, iou, histogram)
-
+                # hungarian matching
                 score_matrix = np.zeros((len(history), len(det_boxes_in_frame)))  # every possible combination of boxes
                 for i_history, (_, item_history) in enumerate(history.items()):
                     for j_det, (box, det_histo) in enumerate(zip(det_boxes_in_frame, histos_in_frame)):

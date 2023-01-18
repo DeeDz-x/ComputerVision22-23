@@ -27,18 +27,19 @@ def detect():
 
     own_dects = np.array(dects, dtype=object)  # copy of the detections to be modified. Numpy to speed up and multi-dim
 
-    own_dects = confidenceFilter(0.0, own_dects)
-    own_dects = iouFilter(0.7, own_dects)
+    own_dects = confidenceFilter(0, own_dects)
+    own_dects = iouFilter(0.5, own_dects)
 
     # (distance, size, iou, histogram)
-    weights = np.array([0.8, 0.5, 0.3, 0.6])
-    history_size = 20  # number of histos to keep in history
+    weights = np.array([0.9, 0.5, 0.3, 0.8])
+    history_size = 30  # number of histos to keep in history
     score_threshold = .2  # threshold for the score to be considered a good enough match
+    MAX_AGE = 25
 
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        if video_ID != 3:
+        if video_ID != 0:
             print('skipping video', video_ID + 1)
             continue
 
@@ -79,7 +80,7 @@ def detect():
                 score_matrix = np.zeros((len(history), len(det_boxes_in_frame)))  # every possible combination of boxes
                 for i_history, (_, item_history) in enumerate(history.items()):
                     for j_det, (box, det_histo) in enumerate(zip(det_boxes_in_frame, histos_in_frame)):
-                        if item_history[0].frame < frame_counter - 30:  # max age of n frames
+                        if item_history[0].frame < frame_counter - MAX_AGE:  # max age of n frames
                             score_matrix[i_history, j_det] = 100000000
                             continue
                         score_matrix[i_history, j_det] = item_history[0].similarity(box, det_histo, item_history[1],

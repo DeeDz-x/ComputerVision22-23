@@ -28,6 +28,7 @@ def getHistosFromImgWithBBs(img: np.ndarray, bbs: list[BoundingBox], mask=None, 
         histos.append(getHisto(img[round(bb.top):round(bb.bottom), round(bb.left):round(bb.right)], mask, binSize))
     return histos
 
+
 def opticalFlow(prevImg, frame_gray, points, flowSize=21, flowLevel=3):
     p1, st, err = cv.calcOpticalFlowPyrLK(prevImg, frame_gray, points, None, None, None,
                                           (flowSize, flowSize), flowLevel,

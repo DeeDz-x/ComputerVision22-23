@@ -1,7 +1,6 @@
 import os
 
 import cv2 as cv
-import numpy as np
 
 from cv.utils.fileHandler import loadFolderMileStone2
 
@@ -43,7 +42,7 @@ if __name__ == '__main__':
     else:
         print('Aborting...')
     exit()
-    #main() # This is for the old generation
+    # main() # This is for the old generation
 
     # This code below is just to verify the new video generation. It print all unique frames
     """

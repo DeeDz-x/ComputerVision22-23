@@ -86,8 +86,10 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
 
     masks = []
     video.set(cv.CAP_PROP_POS_FRAMES, 0)
-    kernel_open = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize_open", 5), kwargs.get("kernelSize_open", 5)))
-    kernel_close = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kwargs.get("kernelSize_close", 5), kwargs.get("kernelSize_close", 5)))
+    kernel_open = cv.getStructuringElement(cv.MORPH_ELLIPSE,
+                                           (kwargs.get("kernelSize_open", 5), kwargs.get("kernelSize_open", 5)))
+    kernel_close = cv.getStructuringElement(cv.MORPH_ELLIPSE,
+                                            (kwargs.get("kernelSize_close", 5), kwargs.get("kernelSize_close", 5)))
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -102,8 +104,8 @@ def opencvBGSubKNN(video: cv.VideoCapture, videoId: int, fps: int = 30, genNewCa
         if kwargs.get('prepareMatching', False):
             prepareMatching(fgMask)
 
-        #cv.imshow("fgMask", fgMask)
-        #cv.waitKey(25)
+        # cv.imshow("fgMask", fgMask)
+        # cv.waitKey(25)
 
         masks.append(cv.cvtColor(fgMask, cv.COLOR_GRAY2BGR))
         if kwargs.get('display', False) and not showVideoFrameWithMask(frame, fgMask, fps):

@@ -43,7 +43,7 @@ def detect():
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        #if video_ID != 1:
+        # if video_ID != 1:
         #    print('skipping video', video_ID + 1)
         #    continue
 

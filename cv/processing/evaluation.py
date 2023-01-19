@@ -69,6 +69,7 @@ if __name__ == '__main__':
 
     print(f'Avg: {sum(res) / len(res)}')
 
+
 # matching(gt, fg)
 
 # rn -> 0 - 1 = -1

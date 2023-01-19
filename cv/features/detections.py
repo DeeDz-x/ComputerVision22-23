@@ -96,7 +96,7 @@ def hungarianMatching(curBoxes, curFrame, curHistos, curFrameCount, history, wei
                 continue
             score_matrix[key_history - 1, j_det] = item_history[0] \
                 .similarity(box, det_histo, item_history[1], curFrame.shape, weights)
-    # solve rectangular assignment problem
+    # actual calculation of the hungarian algorithm
     row_ind, col_ind = linear_sum_assignment(score_matrix)
     return col_ind, row_ind, score_matrix
 

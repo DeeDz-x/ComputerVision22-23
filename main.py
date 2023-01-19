@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import os
 
 import cv2 as cv
@@ -16,9 +17,29 @@ HIDE_GT = False  # if true, the ground truth is not shown, if display is true
 HIDE_DET = False  # if true, the detection is not shown, if display is true
 
 
-def detect():
+def getParams(**kwargs):
+    ret_dir = {
+        'confFilter': -0.05,
+        'iouFilter': 0.3,
+        'weightDist': 0.8,
+        'weightSize': 0.5,
+        'weightIou': 0.3,
+        'weightHistos': 0.8,
+        'maxHistoInHistory': 4,
+        'score_threshold': 0.2,
+        'max_age': 70,
+        'binSize1': 64,
+        'binSize2': 64,
+    }
+    # update with kwargs
+    for key, value in kwargs.items():
+        ret_dir[key] = value
+    return ret_dir
+
+
+def detect(params, name='Default'):
     cur_path = IMAGES_PATH + 'data_ms4\\'
-    videos = loadFolderMileStone4(cur_path, getVideo=True, printInfo=True)
+    videos = loadFolderMileStone4(cur_path, getVideo=True, printInfo=False)
 
     # Prepare loaded data
     dects = [vid[0] for vid in videos]
@@ -27,15 +48,17 @@ def detect():
     seq_infos = [vid[3] for vid in videos]
 
     # Apply Filters
-    own_dects = confidenceFilter(0, dects)
-    own_dects = iouFilter(0.3, own_dects)
+    own_dects = confidenceFilter(params['confFilter'], dects)
+    own_dects = iouFilter(params['iouFilter'], own_dects)
     own_dects = overlapFilter(own_dects)
 
     # Parameters
-    weights = np.array([0.8, 0.5, 0.3, 0.8])  # (distance, size, iou, histogram)
-    maxHistoInHistory = 30  # number of histos to keep in history
-    score_threshold = .2  # threshold for the score to be considered a good enough match (less is better)
-    MAX_AGE = 25  # max age of a 'lost' object before it is ignored
+    weights = np.array([params['weightDist'], params['weightSize'], params['weightIou'],
+                        params['weightHistos']])  # (distance, size, iou, histogram)
+    maxHistoInHistory = params['maxHistoInHistory']  # number of histos to keep in history
+    score_threshold = params[
+        'score_threshold']  # threshold for the score to be considered a good enough match (less is better)
+    MAX_AGE = params['max_age']  # max age of a 'lost' object before it is ignored
 
     # Only used by BorderFilter (currently not used)
     # borderWidth = 0.05
@@ -74,7 +97,8 @@ def detect():
             det_boxes_in_frame: list[BoundingBox] = det_dict[frame_counter]
 
             # calc histo for each box
-            histos_in_frame = getHistosFromImgWithBBs(frame, det_boxes_in_frame, binSize=[32, 32])
+            histos_in_frame = getHistosFromImgWithBBs(frame, det_boxes_in_frame,
+                                                      binSize=[params['binSize1'], params['binSize2']])
 
             if frame_counter == 1:
                 # first frame; just id the boxes incrementally
@@ -132,21 +156,21 @@ def detect():
                     cv.destroyAllWindows()
                     break
 
-            if frame_counter % 100 == 0:  # prints every 100 frames
-                print(f'Video {video_ID + 1} | {frame_counter} / {frame_count} frames')
+            #if frame_counter % 100 == 0:  # prints every 100 frames
+            #    print(f'{name} -- Video {video_ID + 1} | {frame_counter} / {frame_count} frames')
 
-        print(f'Video {video_ID + 1} | Done')
+        #print(f'{name} -- Video {video_ID + 1} | Done')
 
     # cleanup (delete all -2 boxes)
-    print('Cleaning up...')
+    #print(f'{name} -- Cleaning up...')
     for video_ID, video in enumerate(own_dects):
         own_dects[video_ID] = [box for box in video if box.box_id != -2]  # only used in borderFilter
 
     # eval
-    print(f'Evaluating...')
+    #print(f'{name} -- Evaluating...')
     own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
     gts = [[box.toDetectionString() for box in boxes if box.class_id in [1, None]] for boxes in gts]
-    evalMOTA(own_dects, gts)
+    evalMOTA(own_dects, gts, name)
 
 
 def saveHistory(histos_in_frame, boxesInFrame, history, maxHistos):
@@ -183,8 +207,132 @@ def prepareBBs(bbs):
     return ret_dict
 
 
+def startTest(test):
+    test()
+
+
+"""
+'weightDist': 0.8,
+'weightSize': 0.5,
+'weightIou': 0.3,
+'weightHistos': 0.8,
+"""
+def test1():
+    params = getParams()
+    params['weightDist'] = 0.8
+    params['weightSize'] = 0.5
+    params['weightIou'] = 0.3
+    params['weightHistos'] = 0.8
+
+    detect(params, f'(0.8, 0.5, 0.3, 0.8)')
+
+def test2():
+    params = getParams()
+    params['weightDist'] = 1
+    params['weightSize'] = 0.2
+    params['weightIou'] = 0.5
+    params['weightHistos'] = 0.8
+
+    detect(params, f'(1, 0.2, 0.5, 0.8)')
+
+def test3():
+    params = getParams()
+    params['weightDist'] = 0.8
+    params['weightSize'] = 0.5
+    params['weightIou'] = 0.3
+    params['weightHistos'] = 0.5
+
+    detect(params, f'(0.8, 0.5, 0.3, 0.5)')
+
+def test4():
+    params = getParams()
+    params['weightDist'] = 0.8
+    params['weightSize'] = 0.5
+    params['weightIou'] = 0.3
+    params['weightHistos'] = 0.7
+
+    detect(params, f'(0.8, 0.5, 0.3, 0.7)')
+
+def test5():
+    params = getParams()
+    params['weightDist'] = 0.5
+    params['weightSize'] = 0.5
+    params['weightIou'] = 0.3
+    params['weightHistos'] = 0.9
+
+    detect(params, f'(0.5, 0.5, 0.3, 0.9)')
+
+def test6():
+    params = getParams()
+    params['weightDist'] = 0.8
+    params['weightSize'] = 0.8
+    params['weightIou'] = 0.3
+    params['weightHistos'] = 0.5
+
+    detect(params, f'(0.8, 0.8, 0.3, 0.5)')
+
+def test7():
+    params = getParams()
+    params['weightDist'] = 1
+    params['weightSize'] = 0.7
+    params['weightIou'] = 0.1
+    params['weightHistos'] = 1
+
+    detect(params, f'(1, 0.7, 0.1, 1)')
+
+def test8():
+    params = getParams()
+    params['weightDist'] = 1
+    params['weightSize'] = 0.9
+    params['weightIou'] = 0.8
+    params['weightHistos'] = 0.7
+
+    detect(params, f'(1, 0.9, 0.8, 0.7)')
+
+def test9():
+    params = getParams()
+    params['weightDist'] = 0.7
+    params['weightSize'] = 0.8
+    params['weightIou'] = 0.9
+    params['weightHistos'] = 1
+
+    detect(params, f'(0.7, 0.8, 0.9, 1)')
+
+def test10():
+    params = getParams()
+    params['weightDist'] = 0.2
+    params['weightSize'] = 0.4
+    params['weightIou'] = 0.6
+    params['weightHistos'] = 0.8
+
+    detect(params, f'(0.2, 0.4, 0.6, 0.8)')
+
+def test11():
+    params = getParams()
+    params['weightDist'] = 0.8
+    params['weightSize'] = 0.5
+    params['weightIou'] = 0.5
+    params['weightHistos'] = 0.8
+
+    detect(params, f'(0.8, 0.5, 0.5, 0.8)')
+
+def test12():
+    params = getParams()
+    params['weightDist'] = 0.8
+    params['weightSize'] = 0
+    params['weightIou'] = 0.3
+    params['weightHistos'] = 0.8
+
+    detect(params, f'(0.8, 0, 0.3, 0.8)')
+
+
 def main():
-    detect()
+    # pool
+    TESTS = [test1,test2, test3, test4, test5, test6, test7, test8, test9, test10, test11, test12]
+    pool = mp.Pool(processes=6)
+    pool.map(startTest, TESTS)
+    pool.close()
+    pool.join()
 
 
 if __name__ == '__main__':

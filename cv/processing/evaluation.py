@@ -76,7 +76,7 @@ if __name__ == '__main__':
 # rp -> 255-254 = 1
 # fp -> 0-254 = -254
 # fn -> 255-1 = 254
-def evalMOTA(all_dects, all_gts):
+def evalMOTA(all_dects, all_gts, name='Default'):
     accs = []
     for i, dect in enumerate(all_dects):
         gts = all_gts[i]
@@ -92,7 +92,7 @@ def evalMOTA(all_dects, all_gts):
             acc.update(gt[:, 1].astype(int), det[:, 1].astype(int), C)
         accs.append(acc)
     mh = mm.metrics.create()
-    names = [f'Video {i + 1}' for i in range(len(all_dects))]
+    names = [f'{name} -- Video {i + 1}' for i in range(len(all_dects))]
     summary = mh.compute_many(accs,
                               metrics=mm.metrics.motchallenge_metrics,
                               names=names,
@@ -106,5 +106,6 @@ def evalMOTA(all_dects, all_gts):
         namemap=mm.io.motchallenge_metric_names
     )
 
-    print(strsummary)
-    print(f'Average MOTA: {avg_MOTA:.2%} ({avg_MOTA})')
+    #print(f'{name} -- '.join(summary["mota"].values))
+    #print(f'{name} -- ', strsummary)
+    print(f'{name}\t{avg_MOTA}'.replace('.', ','))

@@ -7,6 +7,7 @@ from scipy.optimize import linear_sum_assignment
 from cv.features.detections import confidenceFilter, iouFilter, overlapFilter
 from cv.features.tracking import getHistosFromImgWithBBs
 from cv.processing.evaluation import evalMOTA
+from cv.utils.BoundingBox import BoundingBox
 from cv.utils.fileHandler import loadFolderMileStone4
 from cv.utils.video import playImageAsVideo
 
@@ -36,13 +37,15 @@ def detect():
     history_size = 30  # number of histos to keep in history
     score_threshold = .2  # threshold for the score to be considered a good enough match (less is better)
     MAX_AGE = 25  # max age of a 'lost' object before it is ignored
+    # borderWidth = 0.05
+    # avgNewBoxSizeMultiplier = 3
 
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        #if video_ID != 4:
-        #    print('skipping video', video_ID + 1)
-        #    continue
+        if video_ID != 1:
+            print('skipping video', video_ID + 1)
+            continue
 
         # prepare bb's as dicts
         gt_boxes = gts[video_ID]
@@ -66,8 +69,8 @@ def detect():
             if not ret:
                 break
 
-            gt_boxes_in_frame = gt_dict[frame_counter]
-            det_boxes_in_frame = det_dict[frame_counter]
+            gt_boxes_in_frame: list[BoundingBox] = gt_dict[frame_counter]
+            det_boxes_in_frame: list[BoundingBox] = det_dict[frame_counter]
 
             # calc histo for each box
             histos_in_frame = getHistosFromImgWithBBs(frame, det_boxes_in_frame, binSize=[32, 32])
@@ -103,8 +106,21 @@ def detect():
                     if det_box.box_id == -1:
                         det_box.box_id = next(highestBoxId)
 
+                # border filter
+                """ DISABLED DUE TO BAD SCORES
+                avgBoxSize = np.mean([box.area for box in det_boxes_in_frame])
+                for det_box in det_boxes_in_frame:
+                    # checks if box is in previous frame
+                    if det_box.box_id not in history or history[det_box.box_id][0].frame != frame_counter - 1:
+                        if not det_box.isNearBorder(borderWidth, frame.shape):
+                            if det_box.area > avgBoxSize * avgNewBoxSizeMultiplier:
+                                det_box.box_id = -2  # ignore; delete later
+                """
+
             # save the histos
             for box_in_frame, histo in zip(det_boxes_in_frame, histos_in_frame):
+                if box_in_frame.box_id == -2:
+                    continue
                 if box_in_frame.box_id not in history:
                     history[box_in_frame.box_id] = [box_in_frame, [histo]]
                 else:
@@ -119,16 +135,20 @@ def detect():
                 # overlay for all gt_boxes (with alpha)
                 alpha = 0.4
                 for box in gt_boxes_in_frame:
-                    overlay = box.addBoxToImage(new_frame, (255, 255, 0), verbose=False, getOverlay=True,
-                                                overrideOverlay=overlay)
+                    if box.box_id == -2:
+                        continue
+                    if not HIDE_GT:
+                        overlay = box.addBoxToImage(new_frame, (255, 255, 0), verbose=False, getOverlay=True,
+                                                    overrideOverlay=overlay)
 
                 if overlay is not None:  # apply all gt_boxes (overlay) on frame
-                    if not HIDE_GT:
-                        cv.addWeighted(overlay, alpha, new_frame, 1 - alpha, 0, new_frame)
-                    overlay = None
+                    cv.addWeighted(overlay, alpha, new_frame, 1 - alpha, 0, new_frame)
+                overlay = None
 
                 # overlay for all det_boxes (without alpha)
                 for box in det_boxes_in_frame:
+                    if box.box_id == -2:
+                        continue
                     if not HIDE_DET:
                         overlay = box.addBoxToImage(new_frame, (255, 0, 255), verbose=False, getOverlay=True,
                                                     overrideOverlay=overlay)
@@ -145,6 +165,10 @@ def detect():
 
         print(f'Video {video_ID + 1} | Done')
 
+    # cleanup (delete all -2 boxes)
+    print('Cleaning up...')
+    for video_ID, video in enumerate(own_dects):
+        own_dects[video_ID] = [box for box in video if box.box_id != -2]
     # eval
     print(f'Evaluating...')
     own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]

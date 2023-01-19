@@ -160,7 +160,7 @@ class BoundingBox:
         :param histograms: The history of the histograms
         :param img_shape: The shape of the image/frame
         :param weights: The weights of the histogram
-        :return: Returns the similarity between the two bounding boxes
+        :return: Returns the similarity between the two bounding boxes (0 = identical, 1 = completely different)
         """
         distance = self.distance(other)
         size_difference = abs(self.area - other.area)
@@ -186,3 +186,14 @@ class BoundingBox:
         :return: Returns true if the other box is completely inside this box
         """
         return self.left <= other_box.left and self.top <= other_box.top and self.right >= other_box.right and self.bottom >= other_box.bottom
+
+    def isNearBorder(self, border_width: float, img_shape: tuple):
+        """ Checks if the bounding box is near the border of the image
+
+        :param border_width: The width of the border (in percent)
+        :param img_shape: The shape of the image
+        :return: Returns true if the bounding box is near the border of the image
+        """
+        thicc = img_shape[1] * border_width
+        return self.center_x < thicc or self.center_x > img_shape[1] - thicc \
+            or self.center_y < thicc or self.center_y > img_shape[0] - thicc

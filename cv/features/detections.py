@@ -1,7 +1,9 @@
+from numpy import ndarray
+
 from cv.utils.BoundingBox import BoundingBox
 
 
-def confidenceFilter(threshold, own_dects):
+def confidenceFilter(threshold, own_dects: ndarray[list[BoundingBox]]):
     """ Filters the detections by confidence. Only keeps detections with confidence > threshold
 
     :param threshold: threshold for confidence
@@ -12,7 +14,7 @@ def confidenceFilter(threshold, own_dects):
     return own_dects
 
 
-def iouFilter(threshold, all_boxes):
+def iouFilter(threshold, all_boxes: list[list[BoundingBox]]):
     """ Filters out all boxes within a frame that have an iou with another box > threshold
 
     :param threshold: iou threshold
@@ -40,7 +42,7 @@ def iouFilter(threshold, all_boxes):
     return all_boxes
 
 
-def overlapFilter(all_boxes):
+def overlapFilter(all_boxes: list[list[BoundingBox]]):
     """ Filters out all boxes within a frame that completely overlap another box
 
     :param all_boxes: list of lists of boxes [frames_in_video[every_box_in_video]]

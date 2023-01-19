@@ -211,124 +211,14 @@ def startTest(test):
     test()
 
 
-"""
-'weightDist': 0.8,
-'weightSize': 0.5,
-'weightIou': 0.3,
-'weightHistos': 0.8,
-"""
 def test1():
     params = getParams()
-    params['weightDist'] = 0.8
-    params['weightSize'] = 0.5
-    params['weightIou'] = 0.3
-    params['weightHistos'] = 0.8
 
-    detect(params, f'(0.8, 0.5, 0.3, 0.8)')
-
-def test2():
-    params = getParams()
-    params['weightDist'] = 1
-    params['weightSize'] = 0.2
-    params['weightIou'] = 0.5
-    params['weightHistos'] = 0.8
-
-    detect(params, f'(1, 0.2, 0.5, 0.8)')
-
-def test3():
-    params = getParams()
-    params['weightDist'] = 0.8
-    params['weightSize'] = 0.5
-    params['weightIou'] = 0.3
-    params['weightHistos'] = 0.5
-
-    detect(params, f'(0.8, 0.5, 0.3, 0.5)')
-
-def test4():
-    params = getParams()
-    params['weightDist'] = 0.8
-    params['weightSize'] = 0.5
-    params['weightIou'] = 0.3
-    params['weightHistos'] = 0.7
-
-    detect(params, f'(0.8, 0.5, 0.3, 0.7)')
-
-def test5():
-    params = getParams()
-    params['weightDist'] = 0.5
-    params['weightSize'] = 0.5
-    params['weightIou'] = 0.3
-    params['weightHistos'] = 0.9
-
-    detect(params, f'(0.5, 0.5, 0.3, 0.9)')
-
-def test6():
-    params = getParams()
-    params['weightDist'] = 0.8
-    params['weightSize'] = 0.8
-    params['weightIou'] = 0.3
-    params['weightHistos'] = 0.5
-
-    detect(params, f'(0.8, 0.8, 0.3, 0.5)')
-
-def test7():
-    params = getParams()
-    params['weightDist'] = 1
-    params['weightSize'] = 0.7
-    params['weightIou'] = 0.1
-    params['weightHistos'] = 1
-
-    detect(params, f'(1, 0.7, 0.1, 1)')
-
-def test8():
-    params = getParams()
-    params['weightDist'] = 1
-    params['weightSize'] = 0.9
-    params['weightIou'] = 0.8
-    params['weightHistos'] = 0.7
-
-    detect(params, f'(1, 0.9, 0.8, 0.7)')
-
-def test9():
-    params = getParams()
-    params['weightDist'] = 0.7
-    params['weightSize'] = 0.8
-    params['weightIou'] = 0.9
-    params['weightHistos'] = 1
-
-    detect(params, f'(0.7, 0.8, 0.9, 1)')
-
-def test10():
-    params = getParams()
-    params['weightDist'] = 0.2
-    params['weightSize'] = 0.4
-    params['weightIou'] = 0.6
-    params['weightHistos'] = 0.8
-
-    detect(params, f'(0.2, 0.4, 0.6, 0.8)')
-
-def test11():
-    params = getParams()
-    params['weightDist'] = 0.8
-    params['weightSize'] = 0.5
-    params['weightIou'] = 0.5
-    params['weightHistos'] = 0.8
-
-    detect(params, f'(0.8, 0.5, 0.5, 0.8)')
-
-def test12():
-    params = getParams()
-    params['weightDist'] = 0.8
-    params['weightSize'] = 0
-    params['weightIou'] = 0.3
-    params['weightHistos'] = 0.8
-
-    detect(params, f'(0.8, 0, 0.3, 0.8)')
-
+    detect(params, f'Org')
 
 def main():
     # pool
-    TESTS = [test1,test2, test3, test4, test5, test6, test7, test8, test9, test10, test11, test12]
+    TESTS = [test1]
     pool = mp.Pool(processes=6)
     pool.map(startTest, TESTS)
     pool.close()

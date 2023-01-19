@@ -43,9 +43,9 @@ def detect():
     for video_ID, video in enumerate(video_inputs):  # for each video
 
         # only video x for debugging
-        if video_ID != 1:
-            print('skipping video', video_ID + 1)
-            continue
+        #if video_ID != 1:
+        #    print('skipping video', video_ID + 1)
+        #    continue
 
         # prepare bb's as dicts
         gt_boxes = gts[video_ID]
@@ -81,22 +81,26 @@ def detect():
                     box.box_id = next(highestBoxId)
             else:
                 # hungarian matching
-                score_matrix = np.zeros((len(history), len(det_boxes_in_frame)))  # every possible combination of boxes
-                for i_history, (_, item_history) in enumerate(history.items()):
+                size = max(len(det_boxes_in_frame), len(history))
+                score_matrix = np.ones((size, size))
+
+                for (key_history, item_history) in history.items():
                     for j_det, (box, det_histo) in enumerate(zip(det_boxes_in_frame, histos_in_frame)):
                         if item_history[0].frame < frame_counter - MAX_AGE:  # max age of n frames
-                            score_matrix[i_history, j_det] = 100000000
+                            score_matrix[key_history - 1, j_det] = 100000000
                             continue
-                        score_matrix[i_history, j_det] = item_history[0].similarity(box, det_histo, item_history[1],
-                                                                                    frame.shape, weights)
-                # hungarian matching
+                        score_matrix[key_history - 1, j_det] = item_history[0] \
+                            .similarity(box, det_histo, item_history[1], frame.shape, weights)
+
+                # solve rectangular assignment problem
                 row_ind, col_ind = linear_sum_assignment(score_matrix)
 
                 # update ids from det_boxes_in_frame
                 for i, j in zip(row_ind, col_ind):
-                    score = score_matrix[i, j]
-                    if score > score_threshold:
-                        # match not good enough
+                    if score_matrix[i, j] > score_threshold:
+                        # match is too bad, new id
+                        if j >= len(det_boxes_in_frame):
+                            continue
                         det_boxes_in_frame[j].box_id = next(highestBoxId)
                     else:
                         det_boxes_in_frame[j].box_id = i + 1
@@ -104,7 +108,7 @@ def detect():
                 # create new ids for new boxes
                 for det_box in det_boxes_in_frame:
                     if det_box.box_id == -1:
-                        det_box.box_id = next(highestBoxId)
+                        print("-1 FOUND !!!")
 
                 # border filter
                 """ DISABLED DUE TO BAD SCORES

@@ -2,9 +2,8 @@ import os
 
 import cv2 as cv
 import numpy as np
-from scipy.optimize import linear_sum_assignment
 
-from cv.features.detections import confidenceFilter, iouFilter, overlapFilter
+from cv.features.detections import confidenceFilter, iouFilter, overlapFilter, hungarianMatching
 from cv.features.tracking import getHistosFromImgWithBBs
 from cv.processing.evaluation import evalMOTA
 from cv.utils.BoundingBox import BoundingBox
@@ -21,6 +20,7 @@ def detect():
     cur_path = IMAGES_PATH + 'data_ms4\\'
     videos = loadFolderMileStone4(cur_path, getVideo=True, printInfo=True)
 
+    # Prepare loaded data
     dects = [vid[0] for vid in videos]
     gts = [vid[1] for vid in videos]
     video_inputs = [vid[2] for vid in videos]
@@ -28,15 +28,18 @@ def detect():
 
     own_dects = np.array(dects, dtype=object)  # copy of the detections to be modified. Numpy to speed up and multi-dim
 
+    # Apply Filters
     own_dects = confidenceFilter(0, own_dects)
     own_dects = iouFilter(0.3, own_dects)
     own_dects = overlapFilter(own_dects)
 
-    # (distance, size, iou, histogram)
-    weights = np.array([0.8, 0.5, 0.3, 0.8])
-    history_size = 30  # number of histos to keep in history
+    # Parameters
+    weights = np.array([0.8, 0.5, 0.3, 0.8])  # (distance, size, iou, histogram)
+    maxHistoInHistory = 30  # number of histos to keep in history
     score_threshold = .2  # threshold for the score to be considered a good enough match (less is better)
     MAX_AGE = 25  # max age of a 'lost' object before it is ignored
+
+    # Only used by BorderFilter (currently not used)
     # borderWidth = 0.05
     # avgNewBoxSizeMultiplier = 3
 
@@ -60,8 +63,8 @@ def detect():
         frame_count = int(seq_info['seqlength'])
 
         frame_counter = 0
-        # generator highestBoxId; auto increment
-        highestBoxId = (i for i in range(1, 1000000))  # usage: next(highestBoxId)
+
+        highestBoxId = (i for i in range(1, 1000000))  # auto increment; usage: next(highestBoxId)
         history = {}  # key: box_id, value: [latest_bb, histo_history]
         while True:
             ret, frame = video.read()
@@ -80,58 +83,24 @@ def detect():
                 for box in det_boxes_in_frame:
                     box.box_id = next(highestBoxId)
             else:
-                # hungarian matching
-                size = max(len(det_boxes_in_frame), len(history))
-                score_matrix = np.ones((size, size))
-
-                for (key_history, item_history) in history.items():
-                    for j_det, (box, det_histo) in enumerate(zip(det_boxes_in_frame, histos_in_frame)):
-                        if item_history[0].frame < frame_counter - MAX_AGE:  # max age of n frames
-                            score_matrix[key_history - 1, j_det] = 100000000
-                            continue
-                        score_matrix[key_history - 1, j_det] = item_history[0] \
-                            .similarity(box, det_histo, item_history[1], frame.shape, weights)
-
-                # solve rectangular assignment problem
-                row_ind, col_ind = linear_sum_assignment(score_matrix)
+                col_ind, row_ind, score_matrix = hungarianMatching(det_boxes_in_frame, frame, histos_in_frame,
+                                                                   frame_counter, history, weights, MAX_AGE)
 
                 # update ids from det_boxes_in_frame
                 for i, j in zip(row_ind, col_ind):
                     if score_matrix[i, j] > score_threshold:
                         # match is too bad, new id
-                        if j >= len(det_boxes_in_frame):
+                        if j >= len(det_boxes_in_frame):  # out of bounds check (only happens due to quadratic matrix)
                             continue
                         det_boxes_in_frame[j].box_id = next(highestBoxId)
                     else:
                         det_boxes_in_frame[j].box_id = i + 1
 
-                # create new ids for new boxes
-                for det_box in det_boxes_in_frame:
-                    if det_box.box_id == -1:
-                        print("-1 FOUND !!!")
-
-                # border filter
                 """ DISABLED DUE TO BAD SCORES
-                avgBoxSize = np.mean([box.area for box in det_boxes_in_frame])
-                for det_box in det_boxes_in_frame:
-                    # checks if box is in previous frame
-                    if det_box.box_id not in history or history[det_box.box_id][0].frame != frame_counter - 1:
-                        if not det_box.isNearBorder(borderWidth, frame.shape):
-                            if det_box.area > avgBoxSize * avgNewBoxSizeMultiplier:
-                                det_box.box_id = -2  # ignore; delete later
+                borderFilter(avgNewBoxSizeMultiplier, borderWidth, det_boxes_in_frame, frame, frame_counter, history)
                 """
 
-            # save the histos
-            for box_in_frame, histo in zip(det_boxes_in_frame, histos_in_frame):
-                if box_in_frame.box_id == -2:
-                    continue
-                if box_in_frame.box_id not in history:
-                    history[box_in_frame.box_id] = [box_in_frame, [histo]]
-                else:
-                    history[box_in_frame.box_id][0] = box_in_frame
-                    history[box_in_frame.box_id][1].append(histo)
-                    if len(history[box_in_frame.box_id][1]) >= history_size:
-                        history[box_in_frame.box_id][1].pop(0)
+            saveHistory(histos_in_frame, det_boxes_in_frame, history, maxHistoInHistory)
 
             if DISPLAY:
                 overlay = None
@@ -164,6 +133,7 @@ def detect():
                 if not playImageAsVideo(new_frame, fps, f'{vid_name} | {frame_count} frames'):
                     cv.destroyAllWindows()
                     break
+
             if frame_counter % 100 == 0:  # prints every 100 frames
                 print(f'Video {video_ID + 1} | {frame_counter} / {frame_count} frames')
 
@@ -172,12 +142,34 @@ def detect():
     # cleanup (delete all -2 boxes)
     print('Cleaning up...')
     for video_ID, video in enumerate(own_dects):
-        own_dects[video_ID] = [box for box in video if box.box_id != -2]
+        own_dects[video_ID] = [box for box in video if box.box_id != -2]  # only used in borderFilter
+
     # eval
     print(f'Evaluating...')
     own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
     gts = [[box.toDetectionString() for box in boxes if box.class_id in [1, None]] for boxes in gts]
     evalMOTA(own_dects, gts)
+
+
+def saveHistory(histos_in_frame, boxesInFrame, history, maxHistos):
+    """ Saves the histos plus the box itself of the current frame to the history dict
+
+    :param histos_in_frame: list of histos
+    :param boxesInFrame: list of boxes
+    :param history: the history
+    :param maxHistos: max number of histos to keep in history
+    :return:
+    """
+    for box_in_frame, histo in zip(boxesInFrame, histos_in_frame):
+        if box_in_frame.box_id == -2:
+            continue
+        if box_in_frame.box_id not in history:
+            history[box_in_frame.box_id] = [box_in_frame, [histo]]
+        else:
+            history[box_in_frame.box_id][0] = box_in_frame
+            history[box_in_frame.box_id][1].append(histo)
+            if len(history[box_in_frame.box_id][1]) >= maxHistos:
+                history[box_in_frame.box_id][1].pop(0)
 
 
 def prepareBBs(bbs):

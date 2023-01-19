@@ -5,7 +5,7 @@ from scipy.optimize import linear_sum_assignment
 from cv.utils.BoundingBox import BoundingBox
 
 
-def confidenceFilter(threshold, own_dects: ndarray[list[BoundingBox]]):
+def confidenceFilter(threshold, own_dects: list[list[BoundingBox]]):
     """ Filters the detections by confidence. Only keeps detections with confidence > threshold
 
     :param threshold: threshold for confidence
@@ -34,10 +34,11 @@ def iouFilter(threshold, all_boxes: list[list[BoundingBox]]):
                 for other_box in boxes_in_frame:
                     if box is not other_box:
                         iou = BoundingBox.intersectionOverUnion(box, other_box)
+                        lowerConfBox = box if box.confidence <= other_box.confidence else other_box
                         if iou > threshold:
                             try:
-                                video.remove(other_box)
-                                deleted.append(other_box)
+                                video.remove(lowerConfBox)
+                                deleted.append(lowerConfBox)
                             except ValueError:
                                 pass
                             break

@@ -26,10 +26,8 @@ def detect():
     video_inputs = [vid[2] for vid in videos]
     seq_infos = [vid[3] for vid in videos]
 
-    own_dects = np.array(dects, dtype=object)  # copy of the detections to be modified. Numpy to speed up and multi-dim
-
     # Apply Filters
-    own_dects = confidenceFilter(0, own_dects)
+    own_dects = confidenceFilter(0, dects)
     own_dects = iouFilter(0.3, own_dects)
     own_dects = overlapFilter(own_dects)
 

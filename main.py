@@ -1,4 +1,3 @@
-import multiprocessing as mp
 import os
 
 import cv2 as cv
@@ -56,8 +55,7 @@ def detect(params, name='Default'):
     weights = np.array([params['weightDist'], params['weightSize'], params['weightIou'],
                         params['weightHistos']])  # (distance, size, iou, histogram)
     maxHistoInHistory = params['maxHistoInHistory']  # number of histos to keep in history
-    score_threshold = params[
-        'score_threshold']  # threshold for the score to be considered a good enough match (less is better)
+    score_threshold = params['score_threshold']  # score threshold to be considered good enough match (less is better)
     MAX_AGE = params['max_age']  # max age of a 'lost' object before it is ignored
 
     # Only used by BorderFilter (currently not used)
@@ -156,18 +154,18 @@ def detect(params, name='Default'):
                     cv.destroyAllWindows()
                     break
 
-            #if frame_counter % 100 == 0:  # prints every 100 frames
-            #    print(f'{name} -- Video {video_ID + 1} | {frame_counter} / {frame_count} frames')
+            if frame_counter % 100 == 0:  # prints every 100 frames
+                print(f'{name} -- Video {video_ID + 1} | {frame_counter} / {frame_count} frames')
 
-        #print(f'{name} -- Video {video_ID + 1} | Done')
+        print(f'{name} -- Video {video_ID + 1} | Done')
 
     # cleanup (delete all -2 boxes)
-    #print(f'{name} -- Cleaning up...')
+    print(f'{name} -- Cleaning up...')
     for video_ID, video in enumerate(own_dects):
         own_dects[video_ID] = [box for box in video if box.box_id != -2]  # only used in borderFilter
 
     # eval
-    #print(f'{name} -- Evaluating...')
+    print(f'{name} -- Evaluating...')
     own_dects = [[box.toDetectionString() for box in boxes] for boxes in own_dects]
     gts = [[box.toDetectionString() for box in boxes if box.class_id in [1, None]] for boxes in gts]
     evalMOTA(own_dects, gts, name)
@@ -207,22 +205,9 @@ def prepareBBs(bbs):
     return ret_dict
 
 
-def startTest(test):
-    test()
-
-
-def test1():
-    params = getParams()
-
-    detect(params, f'Org')
-
 def main():
-    # pool
-    TESTS = [test1]
-    pool = mp.Pool(processes=6)
-    pool.map(startTest, TESTS)
-    pool.close()
-    pool.join()
+    params = getParams()
+    detect(params)
 
 
 if __name__ == '__main__':

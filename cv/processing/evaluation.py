@@ -2,10 +2,6 @@ import cv2 as cv
 import motmetrics as mm
 import numpy as np
 
-import cv.processing.bgsubtraction as bgsub
-import cv.utils.fileHandler as fhandler
-import cv.utils.video as v
-
 
 def matching(gtframe, maskframe):
     gray = cv.cvtColor(gtframe, cv.COLOR_BGR2GRAY)
@@ -48,38 +44,10 @@ def fscore(prec: float, rec: float) -> float:
     return 2 * ((prec * rec) / sigma)
 
 
-if __name__ == '__main__':
-    PATH = ''
-
-    cur_path = PATH + 'data_ms2\\'
-
-    videos = fhandler.loadFolderMileStone2(cur_path, getVideo=True)
-
-    video_inputs = [vid[1] for vid in videos]
-    masks = bgsub.ownBGSubMedian(video_inputs[1], 1, 30)
-    video_gt = [vid[0] for vid in videos]
-    gts = video_gt[1]
-    gts = v.videoToFrames(gts, [])
-
-    res = []
-    for i, m in enumerate(masks):
-        if i < 300:
-            continue
-        res.append(matching(gts[i], m))
-
-    print(f'Avg: {sum(res) / len(res)}')
-
-
-# matching(gt, fg)
-
-# rn -> 0 - 1 = -1
-# rp -> 255-254 = 1
-# fp -> 0-254 = -254
-# fn -> 255-1 = 254
 def evalMOTA(all_dects, all_gts, name='Default'):
     accs = []
-    for i, dect in enumerate(all_dects):
-        gts = all_gts[i]
+    for dect_i, dect in enumerate(all_dects):
+        gts = all_gts[dect_i]
         gts = np.array([gt.split(',') for gt in gts])[:, :6]
         gts = gts.astype(float)
         dect = np.array([dect.split(',') for dect in dect])[:, :6]
@@ -92,7 +60,7 @@ def evalMOTA(all_dects, all_gts, name='Default'):
             acc.update(gt[:, 1].astype(int), det[:, 1].astype(int), C)
         accs.append(acc)
     mh = mm.metrics.create()
-    names = [f'{name} -- Video {i + 1}' for i in range(len(all_dects))]
+    names = [f'{name} -- Video {vid_i + 1}' for vid_i in range(len(all_dects))]
     summary = mh.compute_many(accs,
                               metrics=mm.metrics.motchallenge_metrics,
                               names=names,
@@ -106,6 +74,5 @@ def evalMOTA(all_dects, all_gts, name='Default'):
         namemap=mm.io.motchallenge_metric_names
     )
 
-    #print(f'{name} -- '.join(summary["mota"].values))
-    #print(f'{name} -- ', strsummary)
-    print(f'{name}\t{avg_MOTA}'.replace('.', ','))
+    print(strsummary)
+    print(f'{name}\t{avg_MOTA}')
